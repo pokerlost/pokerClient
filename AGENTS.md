@@ -1,0 +1,3 @@
+# pokerClient
+
+This project owns its implementation and public behavior. Read `PROJECT.md` before changing contracts. Preserve user changes and secrets. Use lower camelCase for new project-owned identifiers; keep external API, framework, and tool names intact. Run the commands in `README.md`; add subject tests only for actual behavior, and report an empty test collection honestly. The template does not grant commit, publish, or deployment permissions.
