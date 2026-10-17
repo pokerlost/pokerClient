@@ -15,4 +15,4 @@ uv run --locked mypy
 uv build
 ```
 
-No subject tests are provided by this scaffold. Until real tests exist, status is `notConfigured`; raw `uv run --locked pytest` exits 5. Once tests exist, run that command and treat empty collection as failure. CI, package release, and deployment are separate from a local build. Record this project's decisions in `PROJECT.md`.
+Run `uv run --locked pytest -q` for the current CLI contract. Treat empty collection as failure. CI, package release, and deployment are separate from a local build. Record this project's decisions in `PROJECT.md`.

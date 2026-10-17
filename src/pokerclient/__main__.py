@@ -1,8 +1,8 @@
-"""Allow ``python -m pokerClient``."""
+"""Allow ``python -m pokerclient``."""
 
 from __future__ import annotations
 
-from pokerClient.cli import app
+from pokerclient.cli import app
 
 if __name__ == "__main__":
     app()

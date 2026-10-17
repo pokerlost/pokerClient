@@ -11,22 +11,26 @@ requires-python = ">=3.12"
 dependencies = ["typer>=0.27,<1"]
 
 [project.scripts]
-pokerClient = "pokerClient.cli:app"
+pokerClient = "pokerclient.cli:app"
 
 [dependency-groups]
-dev = ["mypy>=2.3,<3", "ruff>=0.16,<1"]
+dev = ["mypy>=2.3,<3", "ruff>=0.16,<1", "pytest>=9,<10", "pytest-cov>=7,<8"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/pokerClient"]
+packages = ["src/pokerclient"]
 
 [tool.ruff]
 target-version = "py312"
-line-length = 100
+line-length = 88
 
 [tool.ruff.lint]
-select = ["B", "E", "F", "I", "RUF", "UP"]
+select = ["B", "E", "F", "I", "N", "RUF", "UP"]
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["src/pokerClient"]
+files = ["src/pokerclient"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --strict-config"
+markers = ["unit: isolated unit tests", "integration: external dependency tests", "contract: public contract tests"]

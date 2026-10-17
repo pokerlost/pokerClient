@@ -15,4 +15,6 @@ def main() -> None:
 @app.command()
 def status() -> None:
     """Describe the currently available client lifecycle."""
-    typer.echo("Client foundation is installed; game transport and login are not configured.")
+    typer.echo(
+        "Client foundation is installed; game transport and login are not configured."
+    )
