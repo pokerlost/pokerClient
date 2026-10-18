@@ -152,9 +152,13 @@ def test_clean_python_archives_exclude_process_memory_and_local_metadata(
     for name in ("pyproject.toml", "README.md", ".gitignore"):
         shutil.copyfile(root / name, fixture / name)
     shutil.copytree(root / "src", fixture / "src")
-    private_names = {"core.1234", ".coverage", ".aws"}
+    private_names = {"core.1234", ".coverage", ".coverage.parallel", ".aws"}
     for name in private_names:
         (fixture / name).write_bytes(b"synthetic private marker")
+        (fixture / name).chmod(0)
+    (fixture / ".coveragerc").write_text("[run]\nbranch = true\n")
+    (fixture / "src/core").mkdir()
+    (fixture / "src/core/retained.py").write_text("VALUE = 1\n")
     subprocess.run(
         [sys.executable, "-m", "hatchling", "build"],
         cwd=fixture,
@@ -169,4 +173,6 @@ def test_clean_python_archives_exclude_process_memory_and_local_metadata(
         else:
             with tarfile.open(archive) as sdist:
                 names = sdist.getnames()
+            assert any(name.endswith("/.coveragerc") for name in names)
+            assert any(name.endswith("/src/core/retained.py") for name in names)
         assert not any(Path(name).name in private_names for name in names)

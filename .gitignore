@@ -20,5 +20,6 @@ dist/
 **/local.properties
 coverage/
 
-/.coverage*
+/.coverage
+/.coverage.*
 /core.[0-9]*

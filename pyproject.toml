@@ -37,7 +37,7 @@ addopts = "--strict-markers --strict-config --import-mode=importlib"
 markers = ["unit: isolated unit tests", "integration: external dependency tests", "contract: public contract tests"]
 
 [tool.hatch.build]
-exclude = ["/core.[0-9]*", "/.coverage*", ".aws", ".aws/**", ".agents/**", ".codex/**", ".serena/**", ".local/**", "apps/**", "packages/**", "backups/**", ".env", ".env.*"]
+exclude = ["/core.[0-9]*", "/.coverage", "/.coverage.*", ".aws", ".aws/**", ".agents/**", ".codex/**", ".serena/**", ".local/**", "apps/**", "packages/**", "backups/**", ".env", ".env.*"]
 
 [tool.coverage.run]
 branch = true

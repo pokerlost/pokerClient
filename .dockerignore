@@ -25,5 +25,6 @@ dist
 .ruff_cache
 .pytest_cache
 
-core.[0-9]*
-.coverage*
+/core.[0-9]*
+.coverage
+.coverage.*

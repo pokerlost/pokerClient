@@ -203,9 +203,12 @@ jobs:
       - name: Require source and actual Linux/web acceptance
         env:
           RESULTS: ${{ toJSON(needs) }}
+          EVENT: ${{ github.event_name }}
         run: |
           python3 - <<'PYTHON'
           import json, os
           results = json.loads(os.environ['RESULTS'])
-          assert all(job['result'] == 'success' for job in results.values()), results
+          assert all(results[name]['result'] == 'success' for name in ('source', 'native')), results
+          publication = results['publish-reviewed-web']['result']
+          assert publication == 'success' or (os.environ['EVENT'] == 'push' and publication == 'skipped'), results
           PYTHON
