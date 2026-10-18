@@ -1,6 +1,6 @@
 name: poker_client_workspace
 publish_to: none
-version: 0.2.0-dev.0
+version: 0.3.0-dev.0
 environment:
   sdk: ^3.13.0
 workspace:
@@ -8,3 +8,8 @@ workspace:
   - packages/poker_game
   - apps/poker_client
   - apps/poker_game_web
+dev_dependencies:
+  crypto: 3.0.7
+  path: 1.9.1
+  flutter_test:
+    sdk: flutter

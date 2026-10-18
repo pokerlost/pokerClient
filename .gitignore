@@ -1,10 +1,4 @@
-.venv/
-.mypy_cache/
-.ruff_cache/
-.pytest_cache/
-__pycache__/
 dist/
-*.egg-info/
 .env
 
 .aws
@@ -20,6 +14,4 @@ dist/
 **/local.properties
 coverage/
 
-/.coverage
-/.coverage.*
 /core.[0-9]*

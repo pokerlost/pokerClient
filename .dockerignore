@@ -5,7 +5,6 @@
 .serena
 .local
 backups
-.venv
 **/.dart_tool
 **/build
 **/ephemeral
@@ -20,11 +19,5 @@ backups
 .env.*
 coverage
 dist
-**/__pycache__
-.mypy_cache
-.ruff_cache
-.pytest_cache
 
 /core.[0-9]*
-.coverage
-.coverage.*

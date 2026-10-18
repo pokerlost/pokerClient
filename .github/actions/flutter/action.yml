@@ -6,18 +6,15 @@ runs:
     - name: Validate the source-owned toolchain identity
       shell: bash
       run: |
-        python3 - <<'PYTHON'
-        import json, os, re
-        from pathlib import Path
-        lock = json.loads(Path('toolchain.lock.json').read_text())
-        assert re.fullmatch('[0-9a-f]{40}', lock['frameworkRevision'])
-        assert re.fullmatch('[0-9]+[.][0-9]+[.][0-9]+', lock['flutterVersion'])
-        with open(os.environ['GITHUB_ENV'], 'a') as output:
-            output.write('FLUTTER_REVISION=' + lock['frameworkRevision'] + '\n')
-            output.write('FLUTTER_VERSION=' + lock['flutterVersion'] + '\n')
-            output.write('ANALYZER_STATE_LOCATION_OVERRIDE=' + os.environ['RUNNER_TEMP'] + '/dart-analyzer\n')
-            output.write('XDG_CONFIG_HOME=' + os.environ['RUNNER_TEMP'] + '/client-config\n')
-        PYTHON
+        set -euo pipefail
+        revision=$(jq -er '.frameworkRevision | strings | select(test("^[0-9a-f]{40}$"))' toolchain.lock.json)
+        version=$(jq -er '.flutterVersion | strings | select(test("^[0-9]+[.][0-9]+[.][0-9]+$"))' toolchain.lock.json)
+        {
+          printf 'FLUTTER_REVISION=%s\n' "$revision"
+          printf 'FLUTTER_VERSION=%s\n' "$version"
+          printf 'ANALYZER_STATE_LOCATION_OVERRIDE=%s/dart-analyzer\n' "$RUNNER_TEMP"
+          printf 'XDG_CONFIG_HOME=%s/client-config\n' "$RUNNER_TEMP"
+        } >> "$GITHUB_ENV"
     - name: Acquire the exact public SDK ref
       shell: bash
       run: |
@@ -33,11 +30,4 @@ runs:
       run: |
         "$RUNNER_TEMP/flutter-sdk/bin/flutter" --version
         "$RUNNER_TEMP/flutter-sdk/bin/flutter" --version --machine > "$RUNNER_TEMP/flutter-actual.json"
-        python3 - <<'PYTHON'
-        import json, os
-        from pathlib import Path
-        expected = json.loads(Path('toolchain.lock.json').read_text())
-        actual = json.loads((Path(os.environ['RUNNER_TEMP']) / 'flutter-actual.json').read_text())
-        for key, value in expected.items():
-            assert actual[key] == value, (key, actual[key], value)
-        PYTHON
+        "$RUNNER_TEMP/flutter-sdk/bin/dart" tool/toolchain.dart verify "$RUNNER_TEMP/flutter-actual.json"
