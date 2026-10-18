@@ -15,7 +15,10 @@ RUN test "${#FLUTTER_REVISION}" -eq 40 \
     && git -C /opt/flutter fetch --depth=1 origin "refs/tags/$FLUTTER_VERSION:refs/tags/$FLUTTER_VERSION" \
     && git -C /opt/flutter checkout --detach "$FLUTTER_REVISION" \
     && test "$(git -C /opt/flutter rev-parse HEAD)" = "$FLUTTER_REVISION" \
-    && flutter precache --linux --web
+    && flutter precache --web
+
+RUN cp -a /root/.pub-cache /opt/flutter-tool-pub-cache \
+    && PUB_CACHE=/opt/flutter-tool-pub-cache dart pub --directory /opt/flutter/packages/flutter_tools get --offline
 
 FROM sdk AS dependencies
 WORKDIR /app
@@ -42,23 +45,10 @@ RUN --network=none flutter build web --release --no-pub --base-href /game/ --no-
 FROM scratch AS web-artifacts
 COPY --from=web-build /app/apps/poker_game_web/build/web/ /
 
-FROM dependencies AS native-build
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev xvfb lcov \
-    && rm -rf /var/lib/apt/lists/*
-COPY apps/poker_client/lib apps/poker_client/lib
-COPY apps/poker_client/linux apps/poker_client/linux
-COPY apps/poker_client/.metadata apps/poker_client/.metadata
-WORKDIR /app/apps/poker_client
-RUN --network=none flutter build linux --debug --no-pub
-
-FROM scratch AS native-artifacts
-COPY --from=native-build /app/apps/poker_client/build/linux/x64/debug/bundle/ /
-
-FROM native-build AS native-test
-COPY packages/poker_contract/test /app/packages/poker_contract/test
-COPY packages/poker_game/test /app/packages/poker_game/test
-COPY apps/poker_client/test /app/apps/poker_client/test
-COPY apps/poker_client/integration_test /app/apps/poker_client/integration_test
-# The dependency layer retains locked package bytes across fresh BuildKit workers.
-CMD ["xvfb-run", "-a", "flutter", "test", "--no-pub", "integration_test/app_test.dart", "-d", "linux"]
+FROM dependencies AS quality
+RUN apt-get update && apt-get install -y --no-install-recommends make && rm -rf /var/lib/apt/lists/*
+COPY --chmod=u=rwX,go=rX . ./
+RUN flutter pub get --offline --enforce-lockfile && chmod -R a+rwX /opt/flutter/bin/cache
+ENV CONTAINERIZED=1
+ENTRYPOINT ["/bin/sh", "/app/docker/quality-entrypoint.sh"]
+CMD ["make", "check"]

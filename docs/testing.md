@@ -1,28 +1,54 @@
-# Client testing and artifacts
+# Client testing and web artifacts
 
-Contract tests validate bounded values, phase mapping, private-card rejection and embed settings. Shared controller/widget tests exercise loading, unavailable, disconnect/error, reconnect, source replacement, cancellation, disposal and synthetic rendering. Native shell tests cover navigation and appearance/preview settings. The Linux integration test launches that same shell and module on a real target. The web browser acceptance belongs to pokerWeb and uses the actual exported release bundle.
+The supported client delivery is web only. Contract, shared controller/widget, retained shell
+widget and Dart artifact tests run on the Linux VM test engine in Docker. They do not build
+or accept a Linux desktop application. Android/iOS/macOS/Linux desktop runners remain as
+source and their platform build/device acceptance is deferred.
 
-Flutter LCOV reports executable line hits separately for contract, game and native shell. This pinned toolchain does not emit BRDA branch counters in these runs: branch coverage is `notMeasured`, not 100%. Native widget tests do not measure browser-only dart:js_interop code. Browser integration checks that lifecycle separately; no C++ or TypeScript percentage is inferred from Dart lines. Keep uncovered paths visible and the PR Draft while required acceptance remains incomplete.
+## Commands
 
-`make test-unit` runs contract, shared gameplay, native widget and Dart artifact tests, then writes `coverage/dart/source-inventory.json`. This lists every owned Dart source under application/package libraries and `lib/`/`tool/`, including files not instrumented by native LCOV. `make coverage` merges measured LCOV and enforces its existing 100% line gate. This is not whole-source or branch coverage: browser interop and subprocess command wrappers are separately identified. Before this migration, 186/186 measured application lines excluded browser interop; the deleted Python report is not added to Dart totals.
-
-The Dart exporter tests preserve deterministic manifests, all checksums, dirty/exact Git-root rejection, actual SDK identity, symlink/path/inventory checks and tamper detection. Tests use disposable explicitly initialized Git roots and public synthetic fixtures. Removed CLI and wheel tests have no current client contract to test.
-
-Run these commands from the client root with the pinned SDK on PATH:
-
-| Command | Checks or output |
+| Command | Actual responsibility |
 | --- | --- |
-| `make install` | One locked pub workspace; no sibling template or project environment |
-| `make lint typecheck` | Dart formatting and Flutter analysis |
-| `make coverage` | Unit/widget/tool tests, LCOV and full source inventory |
-| `make test` | Unit tests then a real Linux integration launch; use Xvfb on a headless host |
-| `make build-web build-linux` | Embedded release bundle and native debug build |
-| `make docker-artifacts docker-native-test` | Isolated compilation and a fresh Xvfb integration process |
-| `make build-android` | Unsigned arm64 APK; existing SDK license required |
-| `make export-web ARTIFACT_OUTPUT=/absolute/fresh/output` | Build and export a clean-commit artifact |
-| `dart run tool/web_artifact.dart verify /absolute/bundle FULL_CLIENT_SHA` | Verify identity and complete file inventory |
-| `make run` | Native preview; select synthetic preview explicitly |
+| `make help` | Offline read-only command list |
+| `make install` | Cached exact Flutter SDK and locked pub workspace image |
+| `make lint typecheck` | Dart format and Flutter analyze inside Docker |
+| `make test` | Fresh contract/game/shell-widget/tool suites once |
+| `make coverage` | Existing LCOV and complete inventory; no test rerun |
+| `make check` | Static checks and one fresh suite |
+| `make build` | Release web bundle under `dist/docker-web` |
+| `make export-web verify` | Clean full-SHA manifest, checksums and independent verification |
+| `make image` | Local verified asset OCI candidate; no publication |
 
-For Vue browser acceptance, export the clean bundle, update its manifest/source pin in pokerWeb, then use its documented build/browser commands with `GAME_ARTIFACT=/absolute/bundle`. Its production image tests use actual Flutter and distinct scenarios; they do not supply Dart branch counters. Private package ACL and Apple acceptance remain separate gates.
+Git, Make and Docker are the standard contributor tools; host Flutter, Node, Python and LCOV
+are not required. The pinned SDK is configured only inside disposable containers. VM/tool
+tests use independent temporary Git roots and synthetic inputs. The artifact tool rejects
+dirty/wrong roots, symlinks, malformed identities, wrong SDK versions and tampered inventories.
 
-Local Docker builds use isolated caches and standard Flutter/Node tooling; a cache hit never substitutes for fresh unit, browser or native integration runs. Android licenses/signing and Apple runners have separate acceptance status. See [toolchain](flutter-toolchain.md) and [bridge](web_flutter_integration.md).
+## Coverage evidence
+
+LCOV reports measured executable lines for contract, game, retained shell widgets and Dart
+artifact code independently. `tool/coverage_inventory.dart` validates each required report
+against the run-start marker and writes `coverage/dart/source-inventory.json` and
+`coverage/summary.md`. Every owned library/tool/application Dart file is inventoried, including
+uninstrumented browser interop and subprocess wrappers. This toolchain emits no BRDA counters:
+Dart branches are `notMeasured`, never inferred from TypeScript or C++ coverage.
+
+Below 100% produces an advisory warning and exit 0 when mandatory checks pass. Failed tests,
+builds, analysis, empty/corrupt/missing/stale reports still fail. A previous success receipt
+does not make a newly failed test run successful. Technical policy fixtures exercise incomplete
+LCOV success and missing/corrupt/stale failures in real Dart subprocesses. JSON/LCOV reports and
+the numeric table are retained by CI; coverage alone is not a reason to keep a PR Draft.
+
+## Web acceptance and delivery
+
+pokerWeb owns browser acceptance of the real release bundle under Nginx and the platform
+gateway. It covers embedding, route/lifecycle, bridge validation, failures and browser errors.
+Private package read access must pass in the actual consuming Actions job; a local artifact
+copy cannot prove its package ACL. This repository's CI exports the exact successful head.
+The separate owner-dispatched delivery workflow accepts only a successful same-repository CI
+run for the reviewed full SHA, verifies downloaded assets with Dart, and publishes only the
+previously approved private development OCI package. It never rebuilds Flutter at publication,
+creates a release or deploys. Native platform and store delivery remain deferred.
+
+Recovery uses the previous verified source commit plus its matching web artifact and consumer
+pins. Preserve history and storage; remove only task-owned generated output after backing it up.

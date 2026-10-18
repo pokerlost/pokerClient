@@ -1,3 +1,33 @@
+# Read the source lock without requiring a host Dart/Flutter installation.
+FLUTTER_VERSION := $(shell sed -n 's/.*"flutterVersion": "\([^"]*\)".*/\1/p' toolchain.lock.json)
+FLUTTER_REVISION := $(shell sed -n 's/.*"frameworkRevision": "\([^"]*\)".*/\1/p' toolchain.lock.json)
+FLUTTER_BUILD_ARGS := --build-arg FLUTTER_REVISION=$(FLUTTER_REVISION) --build-arg FLUTTER_VERSION=$(FLUTTER_VERSION)
+override DOCKER_BUILD_ARGS += $(FLUTTER_BUILD_ARGS)
+override QUALITY_BUILD_ARGS += $(FLUTTER_BUILD_ARGS)
+ifneq ($(CONTAINERIZED),1)
+QUALITY_DOCKERFILE := Dockerfile
+QUALITY_IMAGE := pokerclient:quality
+QUALITY_EXTRA_TARGETS :=
+GAME_BUNDLE ?= $(CURDIR)/dist/poker-game-web
+CLIENT_SHA = $(shell git rev-parse HEAD)
+IMAGE_COMMAND = $(DOCKER) buildx build --file Dockerfile.web-artifact --build-arg CLIENT_COMMIT=$(CLIENT_SHA) --load --tag poker-game-web:candidate dist/poker-game-web
+VERIFY_COMMAND = $(DOCKER) run --rm --init --network none --user "$$(id -u):$$(id -g)" --entrypoint /opt/flutter/bin/cache/dart-sdk/bin/dart --mount "type=bind,source=$(GAME_BUNDLE),target=/bundle,readonly" $(QUALITY_IMAGE) --packages=/app/.dart_tool/package_config.json /app/tool/web_artifact.dart verify /bundle $(CLIENT_SHA)
+BUILD_COMMAND = $(DOCKER) buildx build $(DOCKER_BUILD_ARGS) --target web-artifacts --output type=local,dest=dist/docker-web .
+COVERAGE_COMMAND := dart tool/coverage_inventory.dart
+QUALITY_RUN = $(DOCKER) run --init --rm --network none --tmpfs /tmp:rw,exec,mode=1777,size=3g --user "$$(id -u):$$(id -g)" --mount "type=bind,source=$(CURDIR)/coverage,target=/app/coverage" --env GITHUB_ACTIONS --env CONTAINERIZED=1 $(QUALITY_IMAGE)
+include docker/quality.mk
+.PHONY: toolchain build-web docker-artifacts
+toolchain:
+	@printf '%s\n' 'FLUTTER_VERSION=$(FLUTTER_VERSION)' 'FLUTTER_REVISION=$(FLUTTER_REVISION)'
+
+build-web docker-artifacts: build
+.PHONY: export-web
+export-web: build quality-image
+	@mkdir -p dist
+	$(DOCKER) run --init --rm --network none --user "$$(id -u):$$(id -g)" --entrypoint /bin/sh --workdir /source --mount "type=bind,source=$(CURDIR),target=/source,readonly" --mount "type=bind,source=$(CURDIR)/dist,target=/output" --env GIT_OPTIONAL_LOCKS=0 $(QUALITY_IMAGE) -ec 'export GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0=/opt/flutter GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1=/source; exec dart --packages=/app/.dart_tool/package_config.json /app/tool/web_artifact.dart export-web /output/docker-web /output/poker-game-web flutter'
+image: export-web
+verify: quality-image
+else
 .DEFAULT_GOAL := help
 FLUTTER ?= flutter
 DART ?= dart
@@ -20,35 +50,19 @@ test-unit:
 	$(FLUTTER) test --no-pub --coverage --coverage-path coverage/game/lcov.info packages/poker_game/test
 	$(FLUTTER) test --no-pub --coverage --coverage-path coverage/native/lcov.info apps/poker_client/test
 	$(FLUTTER) test --no-pub --coverage --coverage-path coverage/tool/lcov.info test
-	$(DART) run tool/coverage_inventory.dart
-build: build-web build-linux
+build: build-web
 build-web:
 	cd apps/poker_game_web && $(FLUTTER) build web --release --no-pub --base-href /game/ --no-web-resources-cdn --csp
 build-linux:
-	cd apps/poker_client && $(FLUTTER) build linux --debug --no-pub
+	@echo "Linux desktop delivery is deferred; sources are retained." >&2
+	@exit 2
 test: test-unit
-	cd apps/poker_client && $(FLUTTER) test --no-pub integration_test/app_test.dart -d linux
 export-web: build-web
 	$(DART) run tool/web_artifact.dart export-web apps/poker_game_web/build/web "$(ARTIFACT_OUTPUT)" "$(FLUTTER)"
 run:
-	cd apps/poker_client && $(FLUTTER) run -d linux
+	cd apps/poker_game_web && $(FLUTTER) run -d web-server --web-hostname 0.0.0.0
 
-# Source-owned toolchain lock is the only ref passed to the public SDK build.
-FLUTTER_VERSION := $(shell $(DART) tool/toolchain.dart flutterVersion)
-FLUTTER_REVISION := $(shell $(DART) tool/toolchain.dart frameworkRevision)
-.PHONY: docker-artifacts docker-native-test
-docker-artifacts:
-	docker buildx build --build-arg FLUTTER_REVISION=$(FLUTTER_REVISION) --build-arg FLUTTER_VERSION=$(FLUTTER_VERSION) --target web-artifacts --output type=local,dest=dist/docker-web .
-	docker buildx build --build-arg FLUTTER_REVISION=$(FLUTTER_REVISION) --build-arg FLUTTER_VERSION=$(FLUTTER_VERSION) --target native-artifacts --output type=local,dest=dist/linux .
-docker-native-test:
-	docker buildx build --build-arg FLUTTER_REVISION=$(FLUTTER_REVISION) --build-arg FLUTTER_VERSION=$(FLUTTER_VERSION) --target native-test --load --tag pokerclient:native-test .
-	docker run --init --rm --network none pokerclient:native-test
 
-.PHONY: build-android coverage
-build-android:
-	@test -n "$$ANDROID_HOME" && test -s "$$ANDROID_HOME/licenses/android-sdk-license"
-	cd apps/poker_client && $(FLUTTER) build apk --debug --no-pub --target-platform android-arm64
-coverage: test-unit
-	mkdir -p coverage/dart
-	lcov --add-tracefile coverage/contract/lcov.info --add-tracefile coverage/game/lcov.info --add-tracefile coverage/native/lcov.info --add-tracefile coverage/tool/lcov.info --output-file coverage/dart/lcov.info
-	lcov --summary coverage/dart/lcov.info --fail-under-lines 100
+check: lint typecheck test
+
+endif
