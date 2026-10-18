@@ -40,7 +40,7 @@ jobs:
             apps/poker_client/build/macos/Build/Products/Debug/
           retention-days: 14
           if-no-files-found: error
-  required:
+  apple-required:
     if: always()
     needs: apple
     runs-on: ubuntu-24.04
