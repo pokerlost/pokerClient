@@ -31,6 +31,7 @@ runs:
     - name: Verify actual Flutter and Dart versions
       shell: bash
       run: |
+        "$RUNNER_TEMP/flutter-sdk/bin/flutter" --version
         "$RUNNER_TEMP/flutter-sdk/bin/flutter" --version --machine > "$RUNNER_TEMP/flutter-actual.json"
         python3 - <<'PYTHON'
         import json, os

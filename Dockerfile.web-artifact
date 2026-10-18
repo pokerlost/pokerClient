@@ -1,0 +1,6 @@
+FROM scratch
+ARG CLIENT_COMMIT
+LABEL org.opencontainers.image.source="https://github.com/pokerlost/pokerClient" \
+      org.opencontainers.image.revision="$CLIENT_COMMIT" \
+      org.opencontainers.image.description="Verified shared Flutter web assets; bridge version is owned by artifact-manifest.json"
+COPY . /
