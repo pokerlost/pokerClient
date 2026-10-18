@@ -1,0 +1,17 @@
+name: poker_game
+publish_to: none
+version: 0.2.0-dev.0
+resolution: workspace
+environment:
+  sdk: ^3.13.0
+  flutter: ">=3.47.0"
+dependencies:
+  flutter:
+    sdk: flutter
+  poker_contract:
+    path: ../poker_contract
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+flutter:
+  uses-material-design: true

@@ -15,3 +15,22 @@ def test_status_reports_foundation_without_business_claims() -> None:
     assert result.output.strip() == (
         "Client foundation is installed; game transport and login are not configured."
     )
+
+
+def test_module_entrypoint_and_import_are_compatible() -> None:
+    import importlib
+    import subprocess
+    import sys
+
+    assert (
+        importlib.import_module("pokerclient.__main__").__name__
+        == "pokerclient.__main__"
+    )
+    result = subprocess.run(
+        [sys.executable, "-m", "pokerclient", "status"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0
+    assert "game transport and login are not configured" in result.stdout

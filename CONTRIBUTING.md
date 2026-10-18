@@ -1,18 +1,7 @@
 # Contributing to pokerClient
 
-Open a short `type/shortCamelCaseIntent` branch from the actual default branch. Keep each PR focused, review the full diff and outgoing commits, and use a `type(scope): intent` title. Explain purpose, ownership, compatibility, actual checks, privacy, version decision, and rollback. Do not attach secrets or live data.
+Use the pinned native pub workspace and preserve the shared gameplay module. `make install lint typecheck test-unit` checks Dart, Flutter and the Python diagnostic/artifact tooling independently. `make test` adds a real Linux integration launch; `make build-web` creates the module used by pokerWeb. See [testing](docs/testing.md) and [toolchain](docs/flutter-toolchain.md) for target limitations.
 
-## 🧪 Local checks
+Keep published Python command/import compatibility explicit. Production transport/auth require actual server contracts, not synthetic success. Preview must remain labelled. Add behavior tests at the matching boundary and verify source/artifact identity. Do not copy widgets or game state into TypeScript, and do not compute authoritative rules in the client.
 
-On the first render, run `uv lock` and commit `uv.lock`. After that, use the locked commands below; CI requires the committed lockfile.
-
-```bash
-uv lock --check
-uv sync --locked
-uv run --locked ruff check .
-uv run --locked ruff format --check .
-uv run --locked mypy
-uv build
-```
-
-Run `uv run --locked pytest -q` for the current CLI contract. Treat empty collection as failure. CI, package release, and deployment are separate from a local build. Record this project's decisions in `PROJECT.md`.
+Use the current work branch and a focused PR with compatibility, actual language-specific coverage, target/build results, version and recovery notes. No credentials, user data or signing keys belong in source or artifacts. Commit/push/release/deployment permissions come from the current task, not this document.

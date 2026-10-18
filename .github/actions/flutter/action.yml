@@ -1,0 +1,41 @@
+name: Pinned Flutter toolchain
+description: Install the client-owned exact Flutter ref without platform licenses or signing keys
+runs:
+  using: composite
+  steps:
+    - name: Validate the source-owned toolchain identity
+      shell: bash
+      run: |
+        python3 - <<'PYTHON'
+        import json, os, re
+        from pathlib import Path
+        lock = json.loads(Path('toolchain.lock.json').read_text())
+        assert re.fullmatch('[0-9a-f]{40}', lock['frameworkRevision'])
+        assert re.fullmatch('[0-9]+[.][0-9]+[.][0-9]+', lock['flutterVersion'])
+        with open(os.environ['GITHUB_ENV'], 'a') as output:
+            output.write('FLUTTER_REVISION=' + lock['frameworkRevision'] + '\n')
+            output.write('ANALYZER_STATE_LOCATION_OVERRIDE=' + os.environ['RUNNER_TEMP'] + '/dart-analyzer\n')
+            output.write('XDG_CONFIG_HOME=' + os.environ['RUNNER_TEMP'] + '/client-config\n')
+        PYTHON
+    - name: Acquire the exact public SDK ref
+      shell: bash
+      run: |
+        set -euo pipefail
+        git init --quiet "$RUNNER_TEMP/flutter-sdk"
+        git -C "$RUNNER_TEMP/flutter-sdk" remote add origin https://github.com/flutter/flutter.git
+        git -C "$RUNNER_TEMP/flutter-sdk" fetch --depth=1 origin "$FLUTTER_REVISION"
+        git -C "$RUNNER_TEMP/flutter-sdk" checkout --detach FETCH_HEAD
+        test "$(git -C "$RUNNER_TEMP/flutter-sdk" rev-parse HEAD)" = "$FLUTTER_REVISION"
+        echo "$RUNNER_TEMP/flutter-sdk/bin" >> "$GITHUB_PATH"
+    - name: Verify actual Flutter and Dart versions
+      shell: bash
+      run: |
+        "$RUNNER_TEMP/flutter-sdk/bin/flutter" --version --machine > "$RUNNER_TEMP/flutter-actual.json"
+        python3 - <<'PYTHON'
+        import json, os
+        from pathlib import Path
+        expected = json.loads(Path('toolchain.lock.json').read_text())
+        actual = json.loads((Path(os.environ['RUNNER_TEMP']) / 'flutter-actual.json').read_text())
+        for key, value in expected.items():
+            assert actual[key] == value, (key, actual[key], value)
+        PYTHON

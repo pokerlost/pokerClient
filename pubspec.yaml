@@ -1,0 +1,10 @@
+name: poker_client_workspace
+publish_to: none
+version: 0.2.0-dev.0
+environment:
+  sdk: ^3.13.0
+workspace:
+  - packages/poker_contract
+  - packages/poker_game
+  - apps/poker_client
+  - apps/poker_game_web

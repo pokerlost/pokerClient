@@ -6,3 +6,16 @@ __pycache__/
 dist/
 *.egg-info/
 .env
+
+.aws
+.serena/
+.agents/
+.codex/
+.local/
+.dart_tool/
+**/.dart_tool/
+**/build/
+.flutter-plugins-dependencies
+**/.flutter-plugins-dependencies
+**/local.properties
+coverage/

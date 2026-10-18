@@ -1,20 +1,11 @@
 # pokerClient
 
-A Python terminal client foundation generated from the generic Python Copier source. It has an honest runnable entrypoint and no connected game or login flow.
+The Dart/Flutter workspace contains the native Android/iOS/Linux/macOS shell and the shared gameplay renderer embedded by pokerWeb. The table shows loading, disconnected, unavailable/error and an explicit synthetic preview. No production game or login adapter exists; the server owns rules, state and balances.
 
-## 🚀 Run
+Use the pinned [Flutter toolchain](docs/flutter-toolchain.md), then `make install lint typecheck test-unit`. `make build-web` produces the embedded module; `make build-linux` builds the native shell. `make test` adds a real Linux integration launch. Android debug output is unsigned and requires an already licensed SDK. Apple source targets require an approved macOS runner. No store release or signing keys are created.
 
-Requires Python 3.12+ and `uv`:
+`make export-web ARTIFACT_OUTPUT=/absolute/fresh/output` exports a clean-commit bundle and SHA256 manifest. pokerWeb pins this identity and consumes the same module used by the native shell. See [architecture](docs/architecture.md), [bridge](docs/web_flutter_integration.md), [testing](docs/testing.md) and [contributing](CONTRIBUTING.md).
 
-```bash
-uv sync --locked
-uv run --locked pokerClient status
-```
+## Python compatibility command
 
-The command reports that transport and login are not configured. It does not open a network connection, load credentials, or display a game table.
-
-## 🧭 Client boundary
-
-The reference curses client in `pokerengine/examples/client/poker_client.py` demonstrates command input and display, while `examples/server/poker_server.py` demonstrates server authority and public/player views. Their newline-delimited JSON/TCP transport lacks production TLS/auth and is not adopted here. A future client separates transport from terminal rendering, presents only server-authorized views, and never computes authoritative state or owns money. `pypokerlost` is an HTTP SDK; it does not supply the unchosen realtime transport.
-
-The current package has no game transport or server API contract. See [PROJECT.md](PROJECT.md), [architecture](docs/architecture.md), and [CONTRIBUTING.md](CONTRIBUTING.md). The package imports as `pokerclient`; the published `pokerClient status` command remains. `uv run --locked pytest -q` checks the current CLI contract. CI checks the lock, style, types, tests, and package build.
+The original compact diagnostic package and its history remain. `uv sync --locked` and `uv run --locked pokerClient status` keep the published command/import contract. It reports unavailable transport/login, opens no connection and reads no credentials. It is not the UI foundation. `make legacy-test legacy-build` checks and builds it independently; the Python candidate version is independent from Flutter app/package/bridge versions.
