@@ -49,34 +49,76 @@ jobs:
           if-no-files-found: error
   native:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 60
     env:
       CI: "true"
-      FLUTTER_SUPPRESS_ANALYTICS: "true"
       NO_PROXY: 127.0.0.1,localhost,::1
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
-      - uses: ./.github/actions/flutter
-      - name: Disposable runner native dependencies
+      - uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+      - name: Read the source-owned SDK lock
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev xvfb
-      - run: flutter pub get --enforce-lockfile
-      - run: make build-linux build-web
-      - name: Real Linux native launch
-        working-directory: apps/poker_client
-        run: xvfb-run -a flutter test --no-pub integration_test/app_test.dart -d linux
-      - name: Export the exact clean-commit web identity
-        run: python3 tools/export_web.py apps/poker_game_web/build/web dist/poker-game-web
+          python3 - <<'PYTHON'
+          import json, os
+          from pathlib import Path
+          lock = json.loads(Path('toolchain.lock.json').read_text())
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write('FLUTTER_REVISION=' + lock['frameworkRevision'] + '\n')
+              output.write('FLUTTER_VERSION=' + lock['flutterVersion'] + '\n')
+          PYTHON
+      - name: Build the reusable native test image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          target: native-test
+          load: true
+          tags: pokerclient:native-test
+          build-args: |
+            FLUTTER_REVISION=${{ env.FLUTTER_REVISION }}
+            FLUTTER_VERSION=${{ env.FLUTTER_VERSION }}
+          cache-from: type=gha,scope=client-native-linux-amd64-${{ github.event_name == 'pull_request' && 'review' || 'trusted' }}
+          cache-to: type=gha,scope=client-native-linux-amd64-${{ github.event_name == 'pull_request' && 'review' || 'trusted' }},mode=max
+      - name: Fresh real Linux native launch
+        run: docker run --init --rm --network none pokerclient:native-test
+      - name: Export the native candidate
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          target: native-artifacts
+          outputs: type=local,dest=dist/linux
+          build-args: |
+            FLUTTER_REVISION=${{ env.FLUTTER_REVISION }}
+            FLUTTER_VERSION=${{ env.FLUTTER_VERSION }}
+          cache-from: type=gha,scope=client-native-linux-amd64-${{ github.event_name == 'pull_request' && 'review' || 'trusted' }}
+      - name: Build the exact web candidate
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          target: web-artifacts
+          outputs: type=local,dest=dist/docker-web
+          build-args: |
+            FLUTTER_REVISION=${{ env.FLUTTER_REVISION }}
+            FLUTTER_VERSION=${{ env.FLUTTER_VERSION }}
+          cache-from: type=gha,scope=client-web-linux-amd64-${{ github.event_name == 'pull_request' && 'review' || 'trusted' }}
+          cache-to: type=gha,scope=client-web-linux-amd64-${{ github.event_name == 'pull_request' && 'review' || 'trusted' }},mode=max
+      - name: Export the exact clean-commit identity with verified SDK metadata
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/flutter-metadata" <<'SHELL'
+          #!/bin/sh
+          exec docker run --init --rm --network none --entrypoint flutter pokerclient:native-test "$@"
+          SHELL
+          chmod 700 "$RUNNER_TEMP/flutter-metadata"
+          python3 tools/export_web.py dist/docker-web dist/poker-game-web --flutter "$RUNNER_TEMP/flutter-metadata"
       - name: Native and embedded-web candidates
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: client-builds-${{ github.sha }}
           path: |
-            apps/poker_client/build/linux/x64/debug/bundle/
+            dist/linux/
             dist/poker-game-web/
           retention-days: 14
           if-no-files-found: error

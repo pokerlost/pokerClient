@@ -98,12 +98,28 @@ def test_cli_exports_only_a_clean_local_git_commit(
     )
     source = bundle(tmp_path)
     output = tmp_path / "artifact"
+    flutter = tmp_path / "flutter"
+    flutter.write_text(
+        f"#!{sys.executable}\nimport json\nprint({json.dumps(TOOLCHAIN)!r})\n"
+    )
+    flutter.chmod(0o755)
     monkeypatch.setattr(export_web, "__file__", str(script))
-    monkeypatch.setattr(sys, "argv", [str(script), str(source), str(output)])
+    monkeypatch.setattr(
+        sys, "argv", [str(script), str(source), str(output), "--flutter", str(flutter)]
+    )
     export_web.main()
     assert json.loads((output / "artifact-manifest.json").read_text())[
         "clientCommit"
     ] == git("rev-parse", "HEAD")
+    flutter.write_text(f"#!{sys.executable}\nprint('{{}}')\n")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [str(script), str(source), str(tmp_path / "wrong"), "--flutter", str(flutter)],
+    )
+    with pytest.raises(RuntimeError, match="toolchain mismatch"):
+        export_web.main()
+    assert not (tmp_path / "wrong").exists()
     script.write_text(script.read_text() + "\n# dirty source\n")
     monkeypatch.setattr(
         sys, "argv", [str(script), str(source), str(tmp_path / "dirty")]
@@ -122,3 +138,35 @@ def test_real_export_cli_help() -> None:
         check=False,
     )
     assert result.returncode == 0 and "bundle" in result.stdout
+
+
+def test_clean_python_archives_exclude_process_memory_and_local_metadata(
+    tmp_path: Path,
+) -> None:
+    import tarfile
+    import zipfile
+
+    root = Path(__file__).resolve().parents[1]
+    fixture = tmp_path / "packaging"
+    fixture.mkdir()
+    for name in ("pyproject.toml", "README.md", ".gitignore"):
+        shutil.copyfile(root / name, fixture / name)
+    shutil.copytree(root / "src", fixture / "src")
+    private_names = {"core.1234", ".coverage", ".aws"}
+    for name in private_names:
+        (fixture / name).write_bytes(b"synthetic private marker")
+    subprocess.run(
+        [sys.executable, "-m", "hatchling", "build"],
+        cwd=fixture,
+        capture_output=True,
+        check=True,
+        timeout=30,
+    )
+    for archive in (fixture / "dist").iterdir():
+        if archive.suffix == ".whl":
+            with zipfile.ZipFile(archive) as wheel:
+                names = wheel.namelist()
+        else:
+            with tarfile.open(archive) as sdist:
+                names = sdist.getnames()
+        assert not any(Path(name).name in private_names for name in names)

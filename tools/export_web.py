@@ -50,6 +50,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("bundle", type=Path)
     parser.add_argument("destination", type=Path)
+    parser.add_argument("--flutter", default="flutter")
     args = parser.parse_args()
     repository = Path(__file__).resolve().parents[1]
     status = subprocess.check_output(
@@ -60,7 +61,14 @@ def main() -> None:
     revision = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=repository, text=True
     ).strip()
-    toolchain = json.loads((repository / "toolchain.lock.json").read_text())
+    expected = json.loads((repository / "toolchain.lock.json").read_text())
+    actual = json.loads(
+        subprocess.check_output([args.flutter, "--version", "--machine"], text=True)
+    )
+    for key, value in expected.items():
+        if actual.get(key) != value:
+            raise RuntimeError(f"Flutter toolchain mismatch: {key}")
+    toolchain = {key: actual[key] for key in expected}
     export_bundle(args.bundle, args.destination, revision, toolchain)
 
 

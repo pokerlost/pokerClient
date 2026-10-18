@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:js_interop';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:poker_contract/poker_contract.dart';
 import 'package:poker_game/poker_game.dart';
 import 'package:web/web.dart' as web;
@@ -21,10 +22,12 @@ class EmbeddedViews extends StatefulWidget {
 
 class _EmbeddedViewsState extends State<EmbeddedViews>
     with WidgetsBindingObserver {
+  late final SemanticsHandle semantics;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    semantics = SemanticsBinding.instance.ensureSemantics();
   }
 
   @override
@@ -32,6 +35,7 @@ class _EmbeddedViewsState extends State<EmbeddedViews>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    semantics.dispose();
     super.dispose();
   }
 
@@ -75,6 +79,7 @@ class _EmbeddedGameState extends State<EmbeddedGame> {
       'instance': configuration?.instance,
       'viewId': widget.viewId,
       'kind': kind,
+      'capabilities': ['preview', 'theme', 'return'],
     });
     host.dispatchEvent(
       web.CustomEvent('poker-event', web.CustomEventInit(detail: data.toJS)),

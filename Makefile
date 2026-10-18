@@ -36,7 +36,18 @@ build-linux:
 	cd apps/poker_client && $(FLUTTER) build linux --debug --no-pub
 test: test-unit
 	cd apps/poker_client && $(FLUTTER) test --no-pub integration_test/app_test.dart -d linux
-export-web:
-	$(UV) run --locked python tools/export_web.py apps/poker_game_web/build/web "$(ARTIFACT_OUTPUT)"
+export-web: build-web
+	$(UV) run --locked python tools/export_web.py apps/poker_game_web/build/web "$(ARTIFACT_OUTPUT)" --flutter "$(FLUTTER)"
 run:
 	cd apps/poker_client && $(FLUTTER) run -d linux
+
+# Source-owned toolchain lock is the only ref passed to the public SDK build.
+FLUTTER_VERSION := $(shell python3 -c 'import json; print(json.load(open("toolchain.lock.json"))["flutterVersion"])')
+FLUTTER_REVISION := $(shell python3 -c 'import json; print(json.load(open("toolchain.lock.json"))["frameworkRevision"])')
+.PHONY: docker-artifacts docker-native-test
+docker-artifacts:
+	docker buildx build --build-arg FLUTTER_REVISION=$(FLUTTER_REVISION) --build-arg FLUTTER_VERSION=$(FLUTTER_VERSION) --target web-artifacts --output type=local,dest=dist/docker-web .
+	docker buildx build --build-arg FLUTTER_REVISION=$(FLUTTER_REVISION) --build-arg FLUTTER_VERSION=$(FLUTTER_VERSION) --target native-artifacts --output type=local,dest=dist/linux .
+docker-native-test:
+	docker buildx build --build-arg FLUTTER_REVISION=$(FLUTTER_REVISION) --build-arg FLUTTER_VERSION=$(FLUTTER_VERSION) --target native-test --load --tag pokerclient:native-test .
+	docker run --init --rm --network none pokerclient:native-test

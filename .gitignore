@@ -19,3 +19,6 @@ dist/
 **/.flutter-plugins-dependencies
 **/local.properties
 coverage/
+
+/.coverage*
+/core.[0-9]*

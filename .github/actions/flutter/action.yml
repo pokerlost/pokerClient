@@ -14,6 +14,7 @@ runs:
         assert re.fullmatch('[0-9]+[.][0-9]+[.][0-9]+', lock['flutterVersion'])
         with open(os.environ['GITHUB_ENV'], 'a') as output:
             output.write('FLUTTER_REVISION=' + lock['frameworkRevision'] + '\n')
+            output.write('FLUTTER_VERSION=' + lock['flutterVersion'] + '\n')
             output.write('ANALYZER_STATE_LOCATION_OVERRIDE=' + os.environ['RUNNER_TEMP'] + '/dart-analyzer\n')
             output.write('XDG_CONFIG_HOME=' + os.environ['RUNNER_TEMP'] + '/client-config\n')
         PYTHON
@@ -23,8 +24,8 @@ runs:
         set -euo pipefail
         git init --quiet "$RUNNER_TEMP/flutter-sdk"
         git -C "$RUNNER_TEMP/flutter-sdk" remote add origin https://github.com/flutter/flutter.git
-        git -C "$RUNNER_TEMP/flutter-sdk" fetch --depth=1 origin "$FLUTTER_REVISION"
-        git -C "$RUNNER_TEMP/flutter-sdk" checkout --detach FETCH_HEAD
+        git -C "$RUNNER_TEMP/flutter-sdk" fetch --depth=1 origin "refs/tags/$FLUTTER_VERSION:refs/tags/$FLUTTER_VERSION"
+        git -C "$RUNNER_TEMP/flutter-sdk" checkout --detach "$FLUTTER_REVISION"
         test "$(git -C "$RUNNER_TEMP/flutter-sdk" rev-parse HEAD)" = "$FLUTTER_REVISION"
         echo "$RUNNER_TEMP/flutter-sdk/bin" >> "$GITHUB_PATH"
     - name: Verify actual Flutter and Dart versions
