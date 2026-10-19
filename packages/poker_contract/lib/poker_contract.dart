@@ -1,6 +1,59 @@
 /// Validated presentation values. These are not a production realtime protocol.
 library;
 
+/// Explicit wire values stay stable when Dart identifiers are renamed.
+enum TablePhase {
+  waiting('waiting'),
+  ready('ready'),
+  betting('betting'),
+  showdown('showdown');
+
+  const TablePhase(this.wireValue);
+  final String wireValue;
+
+  static TablePhase parse(Object? value) => switch (value) {
+    'waiting' => waiting,
+    'ready' => ready,
+    'betting' => betting,
+    'showdown' => showdown,
+    _ => throw const FormatException('Unknown engine phase'),
+  };
+}
+
+enum BridgeTheme {
+  light('light'),
+  dark('dark');
+
+  const BridgeTheme(this.wireValue);
+  final String wireValue;
+
+  static BridgeTheme parse(Object? value) => switch (value) {
+    'light' => light,
+    'dark' => dark,
+    _ => throw const FormatException('Invalid bridge theme'),
+  };
+}
+
+enum BridgeEventKind {
+  ready('ready'),
+  error('error'),
+  returnToHost('return');
+
+  const BridgeEventKind(this.wireValue);
+  final String wireValue;
+
+  static BridgeEventKind parse(Object? value) => switch (value) {
+    'ready' => ready,
+    'error' => error,
+    'return' => returnToHost,
+    _ => throw const FormatException('Invalid bridge event kind'),
+  };
+}
+
+const bridgeContextEventName = 'poker-context';
+const bridgeGameEventName = 'poker-event';
+const bridgeCapabilities = ['preview', 'theme', 'return'];
+
 Map<String, Object?> object(Object? value, Set<String> keys) {
   if (value is! Map<Object?, Object?> ||
       value.keys.any((key) => key is! String || !keys.contains(key))) {
@@ -66,17 +119,14 @@ final class PlayerSnapshot {
 final class TableSnapshot {
   TableSnapshot._(this.version, this.phase, this.pot, this.board, this.players);
   final int version;
-  final String phase;
+  final TablePhase phase;
   final int pot;
   final List<String> board;
   final List<PlayerSnapshot> players;
 
   factory TableSnapshot.parse(Object? value, {String? viewerId}) {
     final data = object(value, {'version', 'phase', 'pot', 'board', 'players'});
-    final phase = text(data['phase']);
-    if (!{'waiting', 'ready', 'betting', 'showdown'}.contains(phase)) {
-      throw const FormatException('Unknown engine phase');
-    }
+    final phase = TablePhase.parse(data['phase']);
     final players = array(
       data['players'],
       22,
@@ -100,9 +150,25 @@ final class BridgeContext {
   BridgeContext._(this.instance, this.theme, this.locale, this.preview);
   static const version = 1;
   final String instance;
-  final String theme;
+  final BridgeTheme theme;
   final String locale;
   final bool preview;
+
+  Map<String, Object?> toJson() => {
+    'version': version,
+    'instance': instance,
+    'theme': theme.wireValue,
+    'locale': locale,
+    'preview': preview,
+  };
+
+  Map<String, Object?> event(int viewId, BridgeEventKind kind) => {
+    'version': version,
+    'instance': instance,
+    'viewId': integer(viewId),
+    'kind': kind.wireValue,
+    'capabilities': bridgeCapabilities,
+  };
 
   factory BridgeContext.parse(Object? value) {
     final data = object(value, {
@@ -117,14 +183,13 @@ final class BridgeContext {
     }
     final instance = text(data['instance']);
     if (!RegExp(r'^[a-zA-Z0-9_-]+$').hasMatch(instance) ||
-        !{'light', 'dark'}.contains(data['theme']) ||
         data['locale'] != 'en' ||
         data['preview'] is! bool) {
       throw const FormatException('Invalid bridge context');
     }
     return BridgeContext._(
       instance,
-      data['theme']! as String,
+      BridgeTheme.parse(data['theme']),
       data['locale']! as String,
       data['preview']! as bool,
     );

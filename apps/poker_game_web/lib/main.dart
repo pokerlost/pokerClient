@@ -73,16 +73,15 @@ class _EmbeddedGameState extends State<EmbeddedGame> {
     configuration = next;
   }
 
-  void send(String kind) {
-    final data = jsonEncode({
-      'version': BridgeContext.version,
-      'instance': configuration?.instance,
-      'viewId': widget.viewId,
-      'kind': kind,
-      'capabilities': ['preview', 'theme', 'return'],
-    });
+  void send(BridgeEventKind kind) {
+    final current = configuration;
+    if (current == null) return;
+    final data = jsonEncode(current.event(widget.viewId, kind));
     host.dispatchEvent(
-      web.CustomEvent('poker-event', web.CustomEventInit(detail: data.toJS)),
+      web.CustomEvent(
+        bridgeGameEventName,
+        web.CustomEventInit(detail: data.toJS),
+      ),
     );
   }
 
@@ -104,18 +103,20 @@ class _EmbeddedGameState extends State<EmbeddedGame> {
         setState(() => error = null);
       } on Object {
         setState(() => error = 'Invalid game context');
-        send('error');
+        send(BridgeEventKind.error);
       }
     }).toJS;
-    host.addEventListener('poker-context', listener);
+    host.addEventListener(bridgeContextEventName, listener);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) send(error == null ? 'ready' : 'error');
+      if (mounted) {
+        send(error == null ? BridgeEventKind.ready : BridgeEventKind.error);
+      }
     });
   }
 
   @override
   void dispose() {
-    host.removeEventListener('poker-context', listener);
+    host.removeEventListener(bridgeContextEventName, listener);
     super.dispose();
   }
 
@@ -125,7 +126,7 @@ class _EmbeddedGameState extends State<EmbeddedGame> {
     initialRoute: "/",
     locale: Locale(configuration?.locale ?? "en"),
     theme: ThemeData(
-      brightness: configuration?.theme == 'dark'
+      brightness: configuration?.theme == BridgeTheme.dark
           ? Brightness.dark
           : Brightness.light,
     ),
@@ -135,7 +136,7 @@ class _EmbeddedGameState extends State<EmbeddedGame> {
             source: configuration!.preview
                 ? const PreviewSource()
                 : const UnavailableSource(),
-            onReturn: () => send('return'),
+            onReturn: () => send(BridgeEventKind.returnToHost),
           ),
   );
 }

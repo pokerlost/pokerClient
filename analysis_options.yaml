@@ -1,3 +1,4 @@
+include: package:lints/recommended.yaml
 analyzer:
   language:
     strict-casts: true
@@ -20,3 +21,4 @@ linter:
     - close_sinks
     - unawaited_futures
     - avoid_print
+    - always_use_package_imports

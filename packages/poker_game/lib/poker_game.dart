@@ -155,7 +155,7 @@ class _GameScreenState extends State<GameScreen> {
                 const SizedBox(height: 12),
                 if (snapshot != null) ...[
                   Text(
-                    'Phase: ${snapshot.phase} · pot: ${snapshot.pot} preview chips',
+                    'Phase: ${snapshot.phase.wireValue} · pot: ${snapshot.pot} preview chips',
                   ),
                   const SizedBox(height: 24),
                   Wrap(

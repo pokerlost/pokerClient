@@ -21,3 +21,4 @@ coverage
 dist
 
 /core.[0-9]*
+.vscode/

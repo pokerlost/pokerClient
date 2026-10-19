@@ -21,3 +21,20 @@ The private `poker-game-web` package remains linked to pokerClient. pokerWeb add
 Read under Manage Actions access. Publication requires a successful CI run, exact full reviewed
 SHA and owner manual dispatch; it is a development artifact, never a release or deployment.
 See [tests](testing.md) and the [browser integration contract](web_flutter_integration.md).
+
+## Dart style and resource ownership
+
+The root analyzer config owns strict casts/inference/raw types and the official
+`lints` 6.1.0 recommended set. Flutter apps and poker_game add `flutter_lints` 6.0.0
+through native ordered includes; poker_contract remains a pure Dart boundary.
+One pub workspace lock owns both versions. `dart format` is the only Dart formatter;
+there is no conflicting quote rule, Prettier pass or editor requirement.
+
+Use lower_snake_case paths/packages, lowerCamelCase values/functions and UpperCamelCase
+types. Choose final/const and null safety deliberately. Widgets render, controllers
+own presentation state, and transport boundaries validate external data. Side effects
+belong to lifecycle/composition, never build(). Close controllers, subscriptions,
+timers and listeners, and check mounted context after await. Wire enums have explicit
+codecs; unknown values fail. Flutter owns one poker_game UI for web and retained native
+adapters. Follow the [common frontend architecture/documentation checks](https://github.com/pokerlost/pokerWeb/blob/main/docs/development.md)
+without importing JavaScript quote/backtick conventions into Dart.

@@ -25,11 +25,49 @@ Map<String, Object?> bridge() => {
 };
 
 void main() {
+  test('wire codecs are explicit, stable and reject unknown variants', () {
+    expect(TablePhase.values.map((phase) => phase.wireValue), [
+      'waiting',
+      'ready',
+      'betting',
+      'showdown',
+    ]);
+    expect(BridgeTheme.values.map((theme) => theme.wireValue), [
+      'light',
+      'dark',
+    ]);
+    for (final theme in BridgeTheme.values) {
+      expect(BridgeTheme.parse(theme.wireValue), theme);
+    }
+    for (final entry in {
+      'ready': BridgeEventKind.ready,
+      'error': BridgeEventKind.error,
+      'return': BridgeEventKind.returnToHost,
+    }.entries) {
+      expect(BridgeEventKind.parse(entry.key), entry.value);
+      expect(entry.value.wireValue, entry.key);
+    }
+    expect(() => BridgeEventKind.parse('unknown'), throwsFormatException);
+    expect(() => BridgeTheme.parse(null), throwsFormatException);
+    final context = BridgeContext.parse(bridge());
+    expect(context.toJson(), bridge());
+    expect(context.event(7, BridgeEventKind.returnToHost), {
+      'version': 1,
+      'instance': 'test_1',
+      'viewId': 7,
+      'kind': 'return',
+      'capabilities': ['preview', 'theme', 'return'],
+    });
+    expect(
+      () => context.event(-1, BridgeEventKind.ready),
+      throwsFormatException,
+    );
+  });
   test('engine projection is immutable and permits only own private cards', () {
     final input = snapshot();
     final table = TableSnapshot.parse(input, viewerId: 'self');
     expect(table.version, 1);
-    expect(table.phase, 'betting');
+    expect(table.phase, TablePhase.betting);
     expect(table.pot, 40);
     expect(table.players.first.cards, ['Qs', 'Qh']);
     expect(table.players.last.cards, isNull);
@@ -69,7 +107,7 @@ void main() {
   for (final phase in ['waiting', 'ready', 'betting', 'showdown']) {
     test('engine phase $phase', () {
       final raw = snapshot()..['phase'] = phase;
-      expect(TableSnapshot.parse(raw, viewerId: 'self').phase, phase);
+      expect(TableSnapshot.parse(raw, viewerId: 'self').phase.wireValue, phase);
     });
   }
   test('unknown phase and duplicated player/seat fail closed', () {
@@ -96,7 +134,7 @@ void main() {
   test('bridge accepts explicit non-secret configuration', () {
     final context = BridgeContext.parse(bridge());
     expect(context.instance, 'test_1');
-    expect(context.theme, 'dark');
+    expect(context.theme, BridgeTheme.dark);
     expect(context.locale, 'en');
     expect(context.preview, isTrue);
   });

@@ -8,8 +8,13 @@ workspace:
   - packages/poker_game
   - apps/poker_client
   - apps/poker_game_web
-dev_dependencies:
+dependencies:
   crypto: 3.0.7
   path: 1.9.1
+dev_dependencies:
+  flutter_lints: 6.0.0
+  lints: 6.1.0
+  poker_contract:
+    path: packages/poker_contract
   flutter_test:
     sdk: flutter
