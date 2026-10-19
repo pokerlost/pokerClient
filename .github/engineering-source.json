@@ -23,5 +23,11 @@
       "source": "template/docker/quality.mk",
       "sha256": "881cd3677effdf37503bd4c1980c0ce11403a6306bb8cdb2974779ff601fa6a4"
     }
+  },
+  "rules": {
+    "engineering": "https://github.com/serrja/pythonTemplate/blob/main/docs/engineering.md",
+    "naming": "https://github.com/pokerlost/pokerClient/blob/main/docs/flutter-toolchain.md",
+    "testing": "https://github.com/pokerlost/pokerClient/blob/main/docs/testing.md",
+    "frontendArchitecture": "https://github.com/pokerlost/pokerWeb/blob/main/docs/development.md"
   }
 }

@@ -7,7 +7,7 @@ override QUALITY_BUILD_ARGS += $(FLUTTER_BUILD_ARGS)
 ifneq ($(CONTAINERIZED),1)
 QUALITY_DOCKERFILE := Dockerfile
 QUALITY_IMAGE := pokerclient:quality
-QUALITY_EXTRA_TARGETS :=
+QUALITY_EXTRA_TARGETS := format-check
 GAME_BUNDLE ?= $(CURDIR)/dist/poker-game-web
 CLIENT_SHA = $(shell git rev-parse HEAD)
 IMAGE_COMMAND = $(DOCKER) buildx build --file Dockerfile.web-artifact --build-arg CLIENT_COMMIT=$(CLIENT_SHA) --load --tag poker-game-web:candidate dist/poker-game-web
@@ -16,6 +16,9 @@ BUILD_COMMAND = $(DOCKER) buildx build $(DOCKER_BUILD_ARGS) --target web-artifac
 COVERAGE_COMMAND := dart tool/coverage_inventory.dart
 QUALITY_RUN = $(DOCKER) run --init --rm --network none --tmpfs /tmp:rw,exec,mode=1777,size=3g --user "$$(id -u):$$(id -g)" --mount "type=bind,source=$(CURDIR)/coverage,target=/app/coverage" --env GITHUB_ACTIONS --env CONTAINERIZED=1 $(QUALITY_IMAGE)
 include docker/quality.mk
+.PHONY: format
+format: quality-image
+	$(DOCKER) run --init --rm --read-only --network none --tmpfs /tmp:rw,exec,mode=1777,size=512m --user "$$(id -u):$$(id -g)" --mount "type=bind,source=$(CURDIR),target=/app" --mount "type=bind,source=$(CURDIR)/.git,target=/app/.git,readonly" --mount "type=volume,target=/app/.dart_tool" --workdir /app --env CONTAINERIZED=1 $(QUALITY_IMAGE) make format DART=/opt/flutter/bin/cache/dart-sdk/bin/dart
 .PHONY: toolchain build-web docker-artifacts
 toolchain:
 	@printf '%s\n' 'FLUTTER_VERSION=$(FLUTTER_VERSION)' 'FLUTTER_REVISION=$(FLUTTER_REVISION)'
@@ -43,6 +46,9 @@ install:
 	$(FLUTTER) pub get --enforce-lockfile
 lint:
 	$(DART) format --output=none --set-exit-if-changed lib tool test packages apps/poker_client/lib apps/poker_client/test apps/poker_client/integration_test apps/poker_game_web/lib
+format-check: lint
+format:
+	$(DART) format lib tool test packages apps/poker_client/lib apps/poker_client/test apps/poker_client/integration_test apps/poker_game_web/lib
 typecheck:
 	$(FLUTTER) analyze --no-pub
 test-unit:
