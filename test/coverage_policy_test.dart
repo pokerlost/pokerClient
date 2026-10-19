@@ -11,6 +11,7 @@ void main() {
     for (final directory in [
       'lib',
       'tool',
+      'packages/poker_http/lib',
       'packages/poker_contract/lib',
       'packages/poker_game/lib',
       'apps/poker_client/lib',
@@ -20,7 +21,7 @@ void main() {
     }
     Directory('${fixture.path}/coverage').createSync();
     File('${fixture.path}/coverage/.started').writeAsStringSync('');
-    for (final name in ['contract', 'game', 'native', 'tool']) {
+    for (final name in ['http', 'contract', 'game', 'native', 'tool']) {
       final report = File('${fixture.path}/coverage/$name/lcov.info');
       report.parent.createSync(recursive: true);
       report.writeAsStringSync(

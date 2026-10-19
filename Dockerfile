@@ -23,6 +23,7 @@ RUN cp -a /root/.pub-cache /opt/flutter-tool-pub-cache \
 FROM sdk AS dependencies
 WORKDIR /app
 COPY pubspec.yaml pubspec.lock ./
+COPY packages/poker_http/pubspec.yaml packages/poker_http/pubspec.yaml
 COPY packages/poker_contract/pubspec.yaml packages/poker_contract/pubspec.yaml
 COPY packages/poker_game/pubspec.yaml packages/poker_game/pubspec.yaml
 COPY apps/poker_client/pubspec.yaml apps/poker_client/pubspec.yaml
@@ -30,8 +31,16 @@ COPY apps/poker_game_web/pubspec.yaml apps/poker_game_web/pubspec.yaml
 RUN --mount=type=cache,id=pokerclient-pub-3.47-linux-amd64,target=/root/.pub-cache,sharing=locked \
     flutter pub get --enforce-lockfile \
     && mkdir -p /opt/pub-cache && cp -a /root/.pub-cache/. /opt/pub-cache/
+COPY --chmod=0444 LICENSE THIRD_PARTY_NOTICES.md /licenses/
+COPY --chmod=u=rwX,go=rX LICENSES/ /licenses/third-party/
+COPY --chmod=0444 packages/poker_http/LICENSE packages/poker_http/LICENSE
+COPY --chmod=0444 packages/poker_contract/LICENSE packages/poker_contract/LICENSE
+COPY --chmod=0444 packages/poker_game/LICENSE packages/poker_game/LICENSE
+COPY --chmod=0444 apps/poker_client/LICENSE apps/poker_client/LICENSE
+COPY --chmod=0444 apps/poker_game_web/LICENSE apps/poker_game_web/LICENSE
 ENV PUB_CACHE=/opt/pub-cache
 RUN flutter pub get --offline --enforce-lockfile
+COPY packages/poker_http/lib packages/poker_http/lib
 COPY packages/poker_contract/lib packages/poker_contract/lib
 COPY packages/poker_game/lib packages/poker_game/lib
 
@@ -41,6 +50,8 @@ COPY apps/poker_game_web/web apps/poker_game_web/web
 COPY apps/poker_game_web/.metadata apps/poker_game_web/.metadata
 WORKDIR /app/apps/poker_game_web
 RUN --network=none flutter build web --release --no-pub --base-href /game/ --no-web-resources-cdn --csp
+
+COPY --from=dependencies /licenses/ /app/apps/poker_game_web/build/web/licenses/
 
 FROM scratch AS web-artifacts
 COPY --from=web-build /app/apps/poker_game_web/build/web/ /

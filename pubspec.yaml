@@ -4,6 +4,7 @@ version: 0.3.0-dev.0
 environment:
   sdk: ^3.13.0
 workspace:
+  - packages/poker_http
   - packages/poker_contract
   - packages/poker_game
   - apps/poker_client

@@ -5,7 +5,7 @@ import 'dart:io';
 // than treating every physical source line as executable or silently omitting it.
 void main() {
   final measurements = <String, Map<int, int>>{};
-  for (final name in ['contract', 'game', 'native', 'tool']) {
+  for (final name in ['http', 'contract', 'game', 'native', 'tool']) {
     final report = File('coverage/$name/lcov.info');
     final started = File('coverage/.started');
     if (report.lastModifiedSync().isBefore(started.lastModifiedSync())) {
@@ -36,6 +36,7 @@ void main() {
   for (final directory in [
     'lib',
     'tool',
+    'packages/poker_http/lib',
     'packages/poker_contract/lib',
     'packages/poker_game/lib',
     'apps/poker_client/lib',

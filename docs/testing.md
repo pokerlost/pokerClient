@@ -12,7 +12,7 @@ source and their platform build/device acceptance is deferred.
 | `make help` | Offline read-only command list |
 | `make install` | Cached exact Flutter SDK and locked pub workspace image |
 | `make lint typecheck` | Dart format and Flutter analyze inside Docker |
-| `make test` | Fresh contract/game/shell-widget/tool suites once |
+| `make test` | Fresh HTTP/contract/game/shell-widget/tool suites once |
 | `make coverage` | Existing LCOV and complete inventory; no test rerun |
 | `make check` | Static checks and one fresh suite |
 | `make build` | Release web bundle under `dist/docker-web` |
@@ -26,7 +26,7 @@ dirty/wrong roots, symlinks, malformed identities, wrong SDK versions and tamper
 
 ## Coverage evidence
 
-LCOV reports measured executable lines for contract, game, retained shell widgets and Dart
+LCOV reports measured executable lines for HTTP, contract, game, retained shell widgets and Dart
 artifact code independently. `tool/coverage_inventory.dart` validates each required report
 against the run-start marker and writes `coverage/dart/source-inventory.json` and
 `coverage/summary.md`. Every owned library/tool/application Dart file is inventoried, including
