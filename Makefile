@@ -52,6 +52,7 @@ format:
 typecheck:
 	$(FLUTTER) analyze --no-pub
 test-unit:
+	$(FLUTTER) test --no-pub --coverage --coverage-path coverage/http/lcov.info packages/poker_http/test
 	$(FLUTTER) test --no-pub --coverage --coverage-path coverage/contract/lcov.info packages/poker_contract/test
 	$(FLUTTER) test --no-pub --coverage --coverage-path coverage/game/lcov.info packages/poker_game/test
 	$(FLUTTER) test --no-pub --coverage --coverage-path coverage/native/lcov.info apps/poker_client/test

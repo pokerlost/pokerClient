@@ -27,3 +27,9 @@ wheel, tooling or scaffold restoration dependency. See [architecture](docs/archi
 [toolchain](docs/flutter-toolchain.md), [testing](docs/testing.md),
 [bridge](docs/web_flutter_integration.md), [versions](docs/versioning.md) and
 [contributing](CONTRIBUTING.md).
+
+## 📄 License
+
+Original source/documentation uses [MIT](LICENSE). Preserve the
+[third-party notices](THIRD_PARTY_NOTICES.md); upstream assets, distributions and
+private data retain their own terms and access boundaries.
