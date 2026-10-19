@@ -1,0 +1,72 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  web:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with: {persist-credentials: false, ref: '${{ github.event.pull_request.head.sha || github.sha }}'}
+      - uses: ./.github/actions/actionlint
+      - run: make toolchain >> "$GITHUB_ENV"
+      - uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+      - name: Cached web and VM-test toolchain
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          target: quality
+          load: true
+          tags: pokerclient:quality
+          build-args: |
+            FLUTTER_REVISION=${{ env.FLUTTER_REVISION }}
+            FLUTTER_VERSION=${{ env.FLUTTER_VERSION }}
+          cache-from: type=gha,scope=${{ github.repository_id }}-quality-flutter347-linux-amd64-${{ github.event_name == 'pull_request' && 'review' || 'trusted' }}
+          cache-to: type=gha,mode=max,scope=${{ github.repository_id }}-quality-flutter347-linux-amd64-${{ github.event_name == 'pull_request' && 'review' || 'trusted' }}
+      - name: Fresh Dart format, analysis, unit, widget and artifact tests
+        run: make check
+      - name: Cached release web candidate; no native platform build
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          target: web-artifacts
+          outputs: type=local,dest=dist/docker-web
+          build-args: |
+            FLUTTER_REVISION=${{ env.FLUTTER_REVISION }}
+            FLUTTER_VERSION=${{ env.FLUTTER_VERSION }}
+          cache-from: type=gha,scope=${{ github.repository_id }}-web-flutter347-linux-amd64-${{ github.event_name == 'pull_request' && 'review' || 'trusted' }}
+          cache-to: type=gha,mode=max,scope=${{ github.repository_id }}-web-flutter347-linux-amd64-${{ github.event_name == 'pull_request' && 'review' || 'trusted' }}
+      - name: Export and verify this exact clean commit with Dart in Docker
+        run: make export-web verify
+      - name: Coverage advisory and complete source inventory
+        if: always()
+        run: test ! -f coverage/summary.md || cat coverage/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: client-checks-${{ github.event.pull_request.head.sha || github.sha }}
+          path: coverage/
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: client-web-${{ github.event.pull_request.head.sha || github.sha }}
+          path: dist/poker-game-web/
+          include-hidden-files: true
+          retention-days: 14
+          if-no-files-found: error
+  required:
+    if: always()
+    needs: [web]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - env: {RESULT: '${{ needs.web.result }}'}
+        run: test "$RESULT" = success

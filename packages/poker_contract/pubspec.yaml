@@ -1,0 +1,11 @@
+name: poker_contract
+publish_to: none
+version: 0.3.0-dev.0
+resolution: workspace
+environment:
+  sdk: ^3.13.0
+  flutter: ">=3.47.0"
+dependencies: {}
+dev_dependencies:
+  flutter_test:
+    sdk: flutter

@@ -1,0 +1,79 @@
+name: Reviewed web artifact delivery
+on:
+  workflow_dispatch:
+    inputs:
+      reviewed_sha: {description: Exact reviewed full client SHA, required: true, type: string}
+      verified_run_id: {description: Successful CI run for that exact SHA, required: true, type: string}
+permissions:
+  contents: read
+concurrency:
+  group: client-web-delivery-${{ inputs.reviewed_sha }}
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.actor == 'serrja' && github.triggering_actor == 'serrja' && inputs.reviewed_sha == github.sha && inputs.reviewed_sha == vars.CLIENT_ARTIFACT_REVIEWED_SHA
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions: {contents: read, actions: read, packages: write}
+    steps:
+      - name: Select only the successful same-repository CI artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REVIEWED_SHA: ${{ inputs.reviewed_sha }}
+          VERIFIED_RUN: ${{ inputs.verified_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$REVIEWED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$VERIFIED_RUN" =~ ^[0-9]+$ ]]
+          test "$(gh api "repos/$GITHUB_REPOSITORY" --jq .private)" = true
+          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$VERIFIED_RUN" --jq '[.head_sha,.conclusion,.path,.head_repository.full_name] | @tsv')
+          test "$run" = "$(printf '%s\tsuccess\t.github/workflows/ci.yml\t%s' "$REVIEWED_SHA" "$GITHUB_REPOSITORY")"
+          gh run download "$VERIFIED_RUN" --repo "$GITHUB_REPOSITORY" --name "client-web-$REVIEWED_SHA" --dir "$RUNNER_TEMP/poker-game-web"
+          install -d -m 700 "$RUNNER_TEMP/registry-auth"
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/registry-auth" >> "$GITHUB_ENV"
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with: {persist-credentials: false, ref: '${{ inputs.reviewed_sha }}'}
+      - uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+      - run: make verify GAME_BUNDLE="$RUNNER_TEMP/poker-game-web"
+      - name: Authenticate to the existing approved private registry
+        env: {REGISTRY_TOKEN: '${{ github.token }}'}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$RUNNER_TEMP/registry-auth"
+          printf '%s' "$REGISTRY_TOKEN" | docker --config "$RUNNER_TEMP/registry-auth" login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+      - name: Publish verified assets without rebuilding Flutter, release or deployment
+        id: publish
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: ${{ runner.temp }}/poker-game-web
+          file: Dockerfile.web-artifact
+          push: true
+          tags: ghcr.io/pokerlost/poker-game-web:sha-${{ inputs.reviewed_sha }}
+          build-args: CLIENT_COMMIT=${{ inputs.reviewed_sha }}
+          sbom: true
+          provenance: mode=max
+      - name: Record immutable private reference
+        env: {GH_TOKEN: '${{ github.token }}', IMAGE_DIGEST: '${{ steps.publish.outputs.digest }}'}
+        run: |
+          set -euo pipefail
+          test "$(gh api orgs/pokerlost/packages/container/poker-game-web --jq .visibility)" = private
+          printf 'ghcr.io/pokerlost/poker-game-web@%s\n' "$IMAGE_DIGEST" | tee "$RUNNER_TEMP/artifact-reference.txt" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: web-artifact-reference-${{ inputs.reviewed_sha }}
+          path: ${{ runner.temp }}/artifact-reference.txt
+          retention-days: 14
+          if-no-files-found: error
+      - name: Remove ephemeral registry login
+        if: always()
+        run: docker --config "$RUNNER_TEMP/registry-auth" logout ghcr.io
+  result:
+    if: always()
+    needs: [publish]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require actual admitted publication
+        env: {RESULT: '${{ needs.publish.result }}'}
+        run: |
+          test "$RESULT" = success || { echo 'Delivery admission or publication did not succeed; no delivery is verified.' >&2; exit 1; }

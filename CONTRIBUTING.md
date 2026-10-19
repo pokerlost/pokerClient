@@ -1,18 +1,16 @@
 # Contributing to pokerClient
 
-Open a short `type/shortCamelCaseIntent` branch from the actual default branch. Keep each PR focused, review the full diff and outgoing commits, and use a `type(scope): intent` title. Explain purpose, ownership, compatibility, actual checks, privacy, version decision, and rollback. Do not attach secrets or live data.
+Use the pinned pub workspace and preserve the shared gameplay module. Git, Make and Docker
+suffice from this exact root: `make check` runs formatting, analysis and all VM/widget/tool
+tests once; `make coverage` reports that fresh result. `make build` exports release web files;
+`make export-web verify` creates and checks a fresh exact-SHA bundle from a clean commit.
+Coverage below 100% warns. Missing/stale reports, assertions, types and builds fail. Native
+platform delivery is deferred and source runners are retained. See [testing](docs/testing.md)
+and [toolchain](docs/flutter-toolchain.md).
 
-## 🧪 Local checks
+`make format` runs the pinned Dart formatter in Docker and writes owned source files.
+`make format-check` checks the same paths without writes. Editor settings are unnecessary.
 
-On the first render, run `uv lock` and commit `uv.lock`. After that, use the locked commands below; CI requires the committed lockfile.
+Use `type/shortCamelCase` for new branches and `type(scope): intent` for PR titles. Production transport/auth require actual server contracts, not synthetic success. Preview must remain labelled. Add behavior tests at the matching boundary and verify source/artifact identity. Do not copy widgets or game state into TypeScript, compute authoritative rules in the client, or restore the removed Python scaffold.
 
-```bash
-uv lock --check
-uv sync --locked
-uv run --locked ruff check .
-uv run --locked ruff format --check .
-uv run --locked mypy
-uv build
-```
-
-No subject tests are provided by this scaffold. Until real tests exist, status is `notConfigured`; raw `uv run --locked pytest` exits 5. Once tests exist, run that command and treat empty collection as failure. CI, package release, and deployment are separate from a local build. Record this project's decisions in `PROJECT.md`.
+Use the current branch and a focused PR with compatibility, actual language coverage, target/build results, version and recovery notes. No credentials, user data or signing keys belong in source or artifacts. Commit/push/release/deployment permissions come from the current task.

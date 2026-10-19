@@ -1,21 +1,29 @@
 # pokerClient
 
-A Python terminal client foundation generated from the generic Python Copier source. It has an honest runnable entrypoint and no connected game or login flow.
+The supported delivery is Flutter Web embedded by the Vue/TypeScript pokerWeb site. One
+`packages/poker_game` module renders gameplay; `poker_contract` owns pure Dart presentation
+validation. Loading, disconnected, unavailable/error and explicit synthetic preview states
+are implemented. Production transport and login remain unavailable pending server contracts.
 
-## 🚀 Run
-
-Requires Python 3.12+ and `uv`:
+From this exact Git root, Git, Make and Docker suffice:
 
 ```bash
-uv lock
-uv sync --locked
-uv run --locked pokerClient status
+make help
+make check
+make coverage
+make build
+make export-web verify
 ```
 
-The command reports that transport and login are not configured. It does not open a network connection, load credentials, or display a game table.
+`check` runs Dart formatting, analysis and all VM/widget/tool tests in a fresh container.
+`coverage` reports that result without rerunning tests; percentages warn, while missing/stale
+reports and real test/build/type errors fail. `build` exports `dist/docker-web`; `export-web`
+requires a clean committed source and a fresh `dist/poker-game-web` destination, records the
+full SHA, toolchain and every file checksum, and `verify` checks that bundle.
 
-## 🧭 Client boundary
-
-The reference curses client in `pokerengine/examples/client/poker_client.py` demonstrates command input and display, while `examples/server/poker_server.py` demonstrates server authority and public/player views. Their newline-delimited JSON/TCP transport lacks production TLS/auth and is not adopted here. A future client separates transport from terminal rendering, presents only server-authorized views, and never computes authoritative state or owns money. `pypokerlost` is an HTTP SDK; it does not supply the unchosen realtime transport.
-
-The current package has no game transport or server API contract. See [PROJECT.md](PROJECT.md), [architecture](docs/architecture.md), and [CONTRIBUTING.md](CONTRIBUTING.md). No subject tests or CI were generated for this Pokerlost foundation.
+Android, iOS, macOS and Linux desktop builds/acceptance are deferred. Their source runners and
+shared widget tests remain; they are not required CI gates. There is no Python client, CLI,
+wheel, tooling or scaffold restoration dependency. See [architecture](docs/architecture.md),
+[toolchain](docs/flutter-toolchain.md), [testing](docs/testing.md),
+[bridge](docs/web_flutter_integration.md), [versions](docs/versioning.md) and
+[contributing](CONTRIBUTING.md).
