@@ -29,6 +29,8 @@ jobs:
           run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$VERIFIED_RUN" --jq '[.head_sha,.conclusion,.path,.head_repository.full_name] | @tsv')
           test "$run" = "$(printf '%s\tsuccess\t.github/workflows/ci.yml\t%s' "$REVIEWED_SHA" "$GITHUB_REPOSITORY")"
           gh run download "$VERIFIED_RUN" --repo "$GITHUB_REPOSITORY" --name "client-web-$REVIEWED_SHA" --dir "$RUNNER_TEMP/poker-game-web"
+          install -d -m 700 "$RUNNER_TEMP/registry-auth"
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/registry-auth" >> "$GITHUB_ENV"
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with: {persist-credentials: false, ref: '${{ inputs.reviewed_sha }}'}
       - uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
@@ -37,7 +39,6 @@ jobs:
         env: {REGISTRY_TOKEN: '${{ github.token }}'}
         run: |
           set -euo pipefail
-          echo "DOCKER_CONFIG=$RUNNER_TEMP/registry-auth" >> "$GITHUB_ENV"
           install -d -m 700 "$RUNNER_TEMP/registry-auth"
           printf '%s' "$REGISTRY_TOKEN" | docker --config "$RUNNER_TEMP/registry-auth" login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
       - name: Publish verified assets without rebuilding Flutter, release or deployment
@@ -65,4 +66,4 @@ jobs:
           if-no-files-found: error
       - name: Remove ephemeral registry login
         if: always()
-        run: rm -rf "$RUNNER_TEMP/registry-auth"
+        run: docker --config "$RUNNER_TEMP/registry-auth" logout ghcr.io
