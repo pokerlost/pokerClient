@@ -38,6 +38,42 @@ void main() {
     Directory.current = original;
     temporary.deleteSync(recursive: true);
   });
+  test(
+    'prepared raw builds reject modified bytes and changed source',
+    () async {
+      Directory('raw').createSync();
+      File('raw/flutter_bootstrap.js').writeAsStringSync('synthetic build');
+      await buildIdentity(capture: true, directory: 'raw');
+      await buildIdentity(capture: false, directory: 'raw');
+      File('raw/flutter_bootstrap.js').writeAsStringSync('changed build');
+      await expectLater(
+        buildIdentity(capture: false, directory: 'raw'),
+        throwsFormatException,
+      );
+      File('raw/flutter_bootstrap.js').writeAsStringSync('synthetic build');
+      writeJson('coverage/source.json', {...source, 'commit': 'c' * 40});
+      await expectLater(
+        buildIdentity(capture: false, directory: 'raw'),
+        throwsFormatException,
+      );
+    },
+  );
+  test('prepared raw builds reject extra files and symlinks', () async {
+    Directory('raw').createSync();
+    File('raw/flutter_bootstrap.js').writeAsStringSync('synthetic build');
+    await buildIdentity(capture: true, directory: 'raw');
+    File('raw/extra').writeAsStringSync('extra');
+    await expectLater(
+      buildIdentity(capture: false, directory: 'raw'),
+      throwsFormatException,
+    );
+    File('raw/extra').deleteSync();
+    Link('raw/link').createSync('flutter_bootstrap.js');
+    await expectLater(
+      buildIdentity(capture: false, directory: 'raw'),
+      throwsFormatException,
+    );
+  });
   test('a failed native check cannot become a successful receipt', () async {
     await receipt([
       'record',

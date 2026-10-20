@@ -16,8 +16,13 @@ Only web delivery is currently accepted. Native source and version identities ar
 repository's native quality/build/acceptance targets once, then checks artifact
 versions. No GitHub token or Actions API is required. Dependency preparation may
 need the existing package/image access; `OFFLINE=1` requires prepared inputs and
-fails as blocked when they are unavailable. BuildKit caches dependencies and build
-layers, while tests execute freshly. `make coverage` reads the current result and
+fails as blocked when they are unavailable. After an online pass on the same clean
+source, offline build validates `coverage/web-build.json` against the complete raw
+Flutter inventory and source identity; it does not invoke BuildKit. Export and
+independent manifest verification still check the existing bundle, and VM/widget
+suites run freshly without network. Changed source, missing inputs, extra files,
+symlinks or modified bytes invalidate reuse. BuildKit caches online dependency and
+build layers. `make coverage` reads the current result and
 never reruns the suite. Coverage below 100% is advisory.
 
 `coverage/ci-local.json` records schema 1, source commit/dirty/content SHA-256,

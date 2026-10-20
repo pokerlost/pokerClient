@@ -35,6 +35,39 @@ Future<Map<String, String>> versions() async {
 String get bundleName =>
     Platform.environment['BUNDLE_NAME'] ?? 'poker-game-web';
 String get bundle => '/artifacts/$bundleName';
+Future<void> buildIdentity({
+  required bool capture,
+  String directory = '/artifacts/docker-web',
+}) async {
+  final source = readJson('coverage/source.json');
+  validateSource(source);
+  if (source['dirty'] != false) {
+    throw const FormatException(
+      'Prepared builds require clean reviewed source',
+    );
+  }
+  if (File('$directory/artifact-manifest.json').existsSync()) {
+    throw const FormatException('Expected the raw Flutter build');
+  }
+  final files = await inventory(Directory(directory));
+  const recordPath = 'coverage/web-build.json';
+  if (capture) {
+    writeJson(recordPath, {'source': source, 'files': files});
+    return;
+  }
+  final saved = readJson(recordPath);
+  validateSource(saved['source']);
+  final expected = saved['files'];
+  if (saved.length != 2 ||
+      jsonEncode(saved['source']) != jsonEncode(source) ||
+      expected is! Map<String, Object?> ||
+      expected.isEmpty ||
+      expected.length != files.length ||
+      !files.entries.every((entry) => expected[entry.key] == entry.value)) {
+    throw const FormatException('Prepared build source or bytes changed');
+  }
+}
+
 Future<void> releaseCheck() async {
   final source = readJson('coverage/source.json');
   if (source['dirty'] != false) {
@@ -306,6 +339,10 @@ Future<void> runMetadata(List<String> args) async {
       );
     case 'release-check':
       await releaseCheck();
+    case 'capture-build':
+      await buildIdentity(capture: true);
+    case 'check-build':
+      await buildIdentity(capture: false);
     case 'receipt':
       await receipt(args.sublist(1));
     default:
