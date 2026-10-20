@@ -10,7 +10,7 @@ QUALITY_IMAGE := pokerclient:quality
 QUALITY_EXTRA_TARGETS := format-check
 GAME_BUNDLE ?= $(CURDIR)/dist/poker-game-web
 CLIENT_SHA = $(shell git rev-parse HEAD)
-IMAGE_COMMAND = $(DOCKER) buildx build --file Dockerfile.web-artifact --build-arg CLIENT_COMMIT=$(CLIENT_SHA) --load --tag poker-game-web:candidate dist/poker-game-web
+IMAGE_COMMAND = $(DOCKER) buildx build --file Dockerfile.web-artifact --build-arg CLIENT_COMMIT=$(CLIENT_SHA) --load --tag poker-game-web:candidate "$(GAME_BUNDLE)"
 VERIFY_COMMAND = $(DOCKER) run --rm --init --network none --user "$$(id -u):$$(id -g)" --entrypoint /opt/flutter/bin/cache/dart-sdk/bin/dart --mount "type=bind,source=$(GAME_BUNDLE),target=/bundle,readonly" $(QUALITY_IMAGE) --packages=/app/.dart_tool/package_config.json /app/tool/web_artifact.dart verify /bundle $(CLIENT_SHA)
 BUILD_COMMAND = $(DOCKER) buildx build $(DOCKER_BUILD_ARGS) $(LOCAL_BUILD_NETWORK) --target web-artifacts --output type=local,dest=dist/docker-web .
 COVERAGE_COMMAND := dart tool/coverage_inventory.dart
@@ -35,6 +35,7 @@ toolchain:
 build-web docker-artifacts: build
 .PHONY: export-web
 export-web: build quality-image
+	@test "$(abspath $(dir $(GAME_BUNDLE)))" = "$(CURDIR)/dist" || { echo "export-web requires a bundle directly under this checkout dist/" >&2; exit 2; }
 	@mkdir -p dist
 	$(DOCKER) run --init --rm --network none --user "$$(id -u):$$(id -g)" --entrypoint /bin/sh --workdir /source --mount "type=bind,source=$(CURDIR),target=/source,readonly" --mount "type=bind,source=$(CURDIR)/dist,target=/output" --env GIT_OPTIONAL_LOCKS=0 $(QUALITY_IMAGE) -ec 'export GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0=/opt/flutter GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1=/source; exec dart --packages=/app/.dart_tool/package_config.json /app/tool/web_artifact.dart export-web /output/docker-web /output/$(notdir $(GAME_BUNDLE)) flutter'
 image: export-web
