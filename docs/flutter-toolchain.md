@@ -30,6 +30,13 @@ through native ordered includes; poker_contract remains a pure Dart boundary.
 One pub workspace lock owns both versions. `dart format` is the only Dart formatter;
 there is no conflicting quote rule, Prettier pass or editor requirement.
 
+The inherited `lints` 6.1.0 core/recommended and `flutter_lints` 6.0.0 sets do not
+include `directives_ordering`; the root enables that native rule once for every
+workspace member. Order `dart:` imports, `package:` imports, then relative imports,
+with blank lines between sections; exports form a separate section. Use the analyzer's
+`dart fix --apply --code=directives_ordering` for existing violations, then `dart format`.
+Keep generated/native platform files outside this formatting scope.
+
 Use lower_snake_case paths/packages, lowerCamelCase values/functions and UpperCamelCase
 types. Choose final/const and null safety deliberately. Widgets render, controllers
 own presentation state, and transport boundaries validate external data. Side effects

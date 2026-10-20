@@ -158,5 +158,17 @@ Future<void> exportCleanCommit(
   if (!expected.entries.every((entry) => actual[entry.key] == entry.value)) {
     throw const FormatException('Flutter toolchain mismatch');
   }
+  if (destination.existsSync()) {
+    await verifyBundle(destination, revision);
+    final existing = await inventory(destination);
+    final rebuilt = await inventory(bundle);
+    if (existing.length != rebuilt.length ||
+        !existing.entries.every((entry) => rebuilt[entry.key] == entry.value)) {
+      throw const FormatException(
+        'Existing bundle differs; use a fresh destination',
+      );
+    }
+    return;
+  }
   await exportBundle(bundle, destination, revision, expected);
 }

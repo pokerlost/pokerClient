@@ -1,13 +1,12 @@
 import 'dart:convert';
 import 'dart:js_interop';
+import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:poker_contract/poker_contract.dart';
 import 'package:poker_game/poker_game.dart';
 import 'package:web/web.dart' as web;
-
-import 'dart:ui_web' as ui_web;
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

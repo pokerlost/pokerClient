@@ -28,6 +28,11 @@ wheel, tooling or scaffold restoration dependency. See [architecture](docs/archi
 [bridge](docs/web_flutter_integration.md), [versions](docs/versioning.md) and
 [contributing](CONTRIBUTING.md).
 
+Run `make help` for native tasks, `make version` for canonical artifact versions,
+and `make ci-local` for the local required checks and `coverage/ci-local.json`.
+`make release-check` validates built artifact identity; it does not publish or tag.
+See [version policy](docs/versioning.md) and the [reviewed delivery guide](docs/release_guide.md).
+
 ## 📄 License
 
 Original source/documentation uses [MIT](LICENSE). Preserve the
