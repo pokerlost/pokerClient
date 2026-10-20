@@ -206,4 +206,21 @@ void main() {
     expect(readJson('coverage/ci-local.json'), containsPair('scope', 'scoped'));
     expect(readJson('coverage/ci-local.json')['artifacts'], isEmpty);
   });
+  test('source corruption is failed even when execution was blocked', () async {
+    await receipt([
+      'record',
+      '--name',
+      'check',
+      '--command',
+      'make check',
+      '--exit-code',
+      '3',
+    ]);
+    writeJson('coverage/source.json', {...source, 'dirty': true});
+    await expectLater(
+      receipt(['finish', '--status', 'blocked']),
+      throwsFormatException,
+    );
+    expect(readJson('coverage/ci-local.json')['status'], 'failed');
+  });
 }

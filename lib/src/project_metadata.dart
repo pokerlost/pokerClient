@@ -242,7 +242,9 @@ Future<void> receipt(List<String> args) async {
         } else if (checks.any((check) => check['status'] == 'blocked')) {
           report['status'] = 'blocked';
         }
-        if (requested == 'passed') {
+        if (requested == 'passed' && report['status'] == 'blocked') {
+          failure = const FormatException('Blocked check cannot produce PASS');
+        } else if (requested == 'passed') {
           if (report['status'] != 'passed') {
             throw const FormatException(
               'Non-passing check cannot produce PASS',
@@ -264,7 +266,7 @@ Future<void> receipt(List<String> args) async {
             : <Object?>[];
       } on Object catch (error) {
         failure = error;
-        if (report['status'] != 'blocked') report['status'] = 'failed';
+        report['status'] = 'failed';
         report['artifacts'] = <Object?>[];
       }
       report['finishedAt'] = DateTime.now().toUtc().toIso8601String();
