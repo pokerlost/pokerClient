@@ -14,7 +14,7 @@ IMAGE_COMMAND = $(DOCKER) buildx build --file Dockerfile.web-artifact --build-ar
 VERIFY_COMMAND = $(DOCKER) run --rm --init --network none --user "$$(id -u):$$(id -g)" --entrypoint /opt/flutter/bin/cache/dart-sdk/bin/dart --mount "type=bind,source=$(GAME_BUNDLE),target=/bundle,readonly" $(QUALITY_IMAGE) --packages=/app/.dart_tool/package_config.json /app/tool/web_artifact.dart verify /bundle $(CLIENT_SHA)
 BUILD_COMMAND = $(DOCKER) buildx build $(DOCKER_BUILD_ARGS) $(LOCAL_BUILD_NETWORK) --target web-artifacts --output type=local,dest=dist/docker-web .
 COVERAGE_COMMAND := dart tool/coverage_inventory.dart
-QUALITY_RUN = $(DOCKER) run --init --rm --network none --tmpfs /tmp:rw,exec,mode=1777,size=3g --user "$$(id -u):$$(id -g)" --mount "type=bind,source=$(CURDIR)/$(REPORT_DIR),target=/app/coverage" --mount "type=bind,source=$(CURDIR)/dist,target=/artifacts,readonly" --env BUNDLE_NAME=$(notdir $(GAME_BUNDLE)) --env GITHUB_ACTIONS --env CONTAINERIZED=1 $(QUALITY_IMAGE)
+QUALITY_RUN = $(DOCKER) run --init --rm --network none --tmpfs /tmp:rw,exec,mode=1777,size=3g --user "$$(id -u):$$(id -g)" --mount "type=bind,source=$(CURDIR)/$(REPORT_DIR),target=/app/coverage" --mount "type=bind,source=$(CURDIR)/dist,target=/artifacts,readonly" --env BUNDLE_NAME=$(notdir $(GAME_BUNDLE)) --env CONTAINERIZED=1 $(QUALITY_IMAGE)
 VERSION_COMMAND = $(QUALITY_RUN) dart tool/project_metadata.dart version
 RELEASE_CHECK_COMMAND = $(QUALITY_RUN) dart tool/project_metadata.dart release-check
 RECEIPT_COMMAND = $(QUALITY_RUN) dart tool/project_metadata.dart receipt

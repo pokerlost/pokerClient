@@ -37,10 +37,11 @@ String get bundleName =>
 String get bundle => '/artifacts/$bundleName';
 Future<void> releaseCheck() async {
   final source = readJson('coverage/source.json');
-  if (source['dirty'] != false)
+  if (source['dirty'] != false) {
     throw const FormatException(
       'Release readiness requires clean reviewed source',
     );
+  }
   final expected = await versions();
   await verifyBundle(Directory(bundle), source['commit']! as String);
   final built = readJson('$bundle/version.json');
@@ -89,8 +90,9 @@ Future<void> receipt(List<String> args) async {
           (checks.isEmpty ||
               checks.any(
                 (entry) => (entry! as Map<String, Object?>)['exitCode'] != 0,
-              )))
+              ))) {
         report['status'] = 'failed';
+      }
       if (jsonEncode(report['source']) !=
           jsonEncode(readJson('coverage/source.json'))) {
         report['status'] = 'failed';
