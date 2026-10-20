@@ -21,8 +21,8 @@
     },
     "docker/quality.mk": {
       "source": "template/docker/quality.mk",
-      "sha256": "2d84bce3b5425d78778ef45ebb49d49d64a5932833eb2ced170617663fddae40",
-      "revision": "2f416c3cdfc011dc36f9fbcca0420ecbf2f1ad37"
+      "sha256": "31f2a873741ca440de1d021e7c767dc0069c56c62ce6b859b944cc437ce098c1",
+      "revision": "b95e247bc59123decdb02e4db6d98fa761b69786"
     },
     "docker/source_identity.sh": {
       "source": "template/docker/source_identity.sh",
@@ -36,5 +36,5 @@
     "testing": "https://github.com/pokerlost/pokerClient/blob/main/docs/testing.md",
     "frontendArchitecture": "https://github.com/pokerlost/pokerWeb/blob/main/docs/development.md"
   },
-  "latestUpdateRevision": "2f416c3cdfc011dc36f9fbcca0420ecbf2f1ad37"
+  "latestUpdateRevision": "b95e247bc59123decdb02e4db6d98fa761b69786"
 }
