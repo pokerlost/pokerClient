@@ -140,10 +140,24 @@ void main() {
           '0',
         ]);
       }
-      await expectLater(
-        receipt(['finish', '--status', 'passed']),
-        throwsFormatException,
+      // The real online bundle can already exist during an offline rerun.
+      // Give this negative case its own absent artifact namespace.
+      final missing = temporary.path.split(Platform.pathSeparator).last;
+      final result = await Process.run(
+        'dart',
+        [
+          '--packages=${original.path}/.dart_tool/package_config.json',
+          '${original.path}/tool/project_metadata.dart',
+          'receipt',
+          'finish',
+          '--status',
+          'passed',
+        ],
+        environment: {'BUNDLE_NAME': missing},
       );
+      expect(result.exitCode, isNot(0));
+      expect(result.stderr, contains('Missing required built artifact'));
+      expect(readJson('coverage/ci-local.json')['status'], 'failed');
     },
   );
   test(
