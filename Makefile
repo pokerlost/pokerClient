@@ -12,10 +12,19 @@ GAME_BUNDLE ?= $(CURDIR)/dist/poker-game-web
 CLIENT_SHA = $(shell git rev-parse HEAD)
 IMAGE_COMMAND = $(DOCKER) buildx build --file Dockerfile.web-artifact --build-arg CLIENT_COMMIT=$(CLIENT_SHA) --load --tag poker-game-web:candidate dist/poker-game-web
 VERIFY_COMMAND = $(DOCKER) run --rm --init --network none --user "$$(id -u):$$(id -g)" --entrypoint /opt/flutter/bin/cache/dart-sdk/bin/dart --mount "type=bind,source=$(GAME_BUNDLE),target=/bundle,readonly" $(QUALITY_IMAGE) --packages=/app/.dart_tool/package_config.json /app/tool/web_artifact.dart verify /bundle $(CLIENT_SHA)
-BUILD_COMMAND = $(DOCKER) buildx build $(DOCKER_BUILD_ARGS) --target web-artifacts --output type=local,dest=dist/docker-web .
+BUILD_COMMAND = $(DOCKER) buildx build $(DOCKER_BUILD_ARGS) $(LOCAL_BUILD_NETWORK) --target web-artifacts --output type=local,dest=dist/docker-web .
 COVERAGE_COMMAND := dart tool/coverage_inventory.dart
-QUALITY_RUN = $(DOCKER) run --init --rm --network none --tmpfs /tmp:rw,exec,mode=1777,size=3g --user "$$(id -u):$$(id -g)" --mount "type=bind,source=$(CURDIR)/coverage,target=/app/coverage" --env GITHUB_ACTIONS --env CONTAINERIZED=1 $(QUALITY_IMAGE)
+QUALITY_RUN = $(DOCKER) run --init --rm --network none --tmpfs /tmp:rw,exec,mode=1777,size=3g --user "$$(id -u):$$(id -g)" --mount "type=bind,source=$(CURDIR)/$(REPORT_DIR),target=/app/coverage" --mount "type=bind,source=$(CURDIR)/dist,target=/artifacts,readonly" --env BUNDLE_NAME=$(notdir $(GAME_BUNDLE)) --env GITHUB_ACTIONS --env CONTAINERIZED=1 $(QUALITY_IMAGE)
+VERSION_COMMAND = $(QUALITY_RUN) dart tool/project_metadata.dart version
+RELEASE_CHECK_COMMAND = $(QUALITY_RUN) dart tool/project_metadata.dart release-check
+RECEIPT_COMMAND = $(QUALITY_RUN) dart tool/project_metadata.dart receipt
+OFFLINE_PREFLIGHT_COMMAND = test -d dist/docker-web && test -f dist/docker-web/version.json || { echo "BLOCKED: prepare the exact native web build online first." >&2; exit 2; }
+CI_LOCAL_TARGETS := check coverage build export-web verify release-check
 include docker/quality.mk
+quality-image: prepare-artifact-directory
+.PHONY: prepare-artifact-directory
+prepare-artifact-directory:
+	@mkdir -p dist
 .PHONY: format
 format: quality-image
 	$(DOCKER) run --init --rm --read-only --network none --tmpfs /tmp:rw,exec,mode=1777,size=512m --user "$$(id -u):$$(id -g)" --mount "type=bind,source=$(CURDIR),target=/app" --mount "type=bind,source=$(CURDIR)/.git,target=/app/.git,readonly" --mount "type=volume,target=/app/.dart_tool" --workdir /app --env CONTAINERIZED=1 $(QUALITY_IMAGE) make format DART=/opt/flutter/bin/cache/dart-sdk/bin/dart
@@ -27,7 +36,7 @@ build-web docker-artifacts: build
 .PHONY: export-web
 export-web: build quality-image
 	@mkdir -p dist
-	$(DOCKER) run --init --rm --network none --user "$$(id -u):$$(id -g)" --entrypoint /bin/sh --workdir /source --mount "type=bind,source=$(CURDIR),target=/source,readonly" --mount "type=bind,source=$(CURDIR)/dist,target=/output" --env GIT_OPTIONAL_LOCKS=0 $(QUALITY_IMAGE) -ec 'export GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0=/opt/flutter GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1=/source; exec dart --packages=/app/.dart_tool/package_config.json /app/tool/web_artifact.dart export-web /output/docker-web /output/poker-game-web flutter'
+	$(DOCKER) run --init --rm --network none --user "$$(id -u):$$(id -g)" --entrypoint /bin/sh --workdir /source --mount "type=bind,source=$(CURDIR),target=/source,readonly" --mount "type=bind,source=$(CURDIR)/dist,target=/output" --env GIT_OPTIONAL_LOCKS=0 $(QUALITY_IMAGE) -ec 'export GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0=/opt/flutter GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1=/source; exec dart --packages=/app/.dart_tool/package_config.json /app/tool/web_artifact.dart export-web /output/docker-web /output/$(notdir $(GAME_BUNDLE)) flutter'
 image: export-web
 verify: quality-image
 else
@@ -52,11 +61,12 @@ format:
 typecheck:
 	$(FLUTTER) analyze --no-pub
 test-unit:
-	$(FLUTTER) test --no-pub --coverage --coverage-path coverage/http/lcov.info packages/poker_http/test
-	$(FLUTTER) test --no-pub --coverage --coverage-path coverage/contract/lcov.info packages/poker_contract/test
-	$(FLUTTER) test --no-pub --coverage --coverage-path coverage/game/lcov.info packages/poker_game/test
-	$(FLUTTER) test --no-pub --coverage --coverage-path coverage/native/lcov.info apps/poker_client/test
-	$(FLUTTER) test --no-pub --coverage --coverage-path coverage/tool/lcov.info test
+	@mkdir -p coverage/http coverage/contract coverage/game coverage/native coverage/tool
+	$(FLUTTER) test --no-pub --coverage --coverage-path coverage/http/lcov.info --file-reporter json:coverage/http/tests.json packages/poker_http/test
+	$(FLUTTER) test --no-pub --coverage --coverage-path coverage/contract/lcov.info --file-reporter json:coverage/contract/tests.json packages/poker_contract/test
+	$(FLUTTER) test --no-pub --coverage --coverage-path coverage/game/lcov.info --file-reporter json:coverage/game/tests.json packages/poker_game/test
+	$(FLUTTER) test --no-pub --coverage --coverage-path coverage/native/lcov.info --file-reporter json:coverage/native/tests.json apps/poker_client/test
+	$(FLUTTER) test --no-pub --coverage --coverage-path coverage/tool/lcov.info --file-reporter json:coverage/tool/tests.json test
 build: build-web
 build-web:
 	cd apps/poker_game_web && $(FLUTTER) build web --release --no-pub --base-href /game/ --no-web-resources-cdn --csp

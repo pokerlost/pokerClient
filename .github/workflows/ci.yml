@@ -30,8 +30,6 @@ jobs:
             FLUTTER_VERSION=${{ env.FLUTTER_VERSION }}
           cache-from: type=gha,scope=${{ github.repository_id }}-quality-flutter347-linux-amd64-${{ github.event_name == 'pull_request' && 'review' || 'trusted' }}
           cache-to: type=gha,mode=max,scope=${{ github.repository_id }}-quality-flutter347-linux-amd64-${{ github.event_name == 'pull_request' && 'review' || 'trusted' }}
-      - name: Fresh Dart format, analysis, unit, widget and artifact tests
-        run: make check
       - name: Cached release web candidate; no native platform build
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
@@ -44,7 +42,7 @@ jobs:
           cache-from: type=gha,scope=${{ github.repository_id }}-web-flutter347-linux-amd64-${{ github.event_name == 'pull_request' && 'review' || 'trusted' }}
           cache-to: type=gha,mode=max,scope=${{ github.repository_id }}-web-flutter347-linux-amd64-${{ github.event_name == 'pull_request' && 'review' || 'trusted' }}
       - name: Export and verify this exact clean commit with Dart in Docker
-        run: make export-web verify
+        run: make ci-local
       - name: Coverage advisory and complete source inventory
         if: always()
         run: test ! -f coverage/summary.md || cat coverage/summary.md >> "$GITHUB_STEP_SUMMARY"

@@ -21,7 +21,13 @@
     },
     "docker/quality.mk": {
       "source": "template/docker/quality.mk",
-      "sha256": "881cd3677effdf37503bd4c1980c0ce11403a6306bb8cdb2974779ff601fa6a4"
+      "sha256": "5da1c65ef9610cb28bf0652e908ec785c2cb37d677d1995856c28a292785eb85",
+      "revision": "1aaab606373980a6084ae1a69069280241fb27de"
+    },
+    "docker/source_identity.sh": {
+      "source": "template/docker/source_identity.sh",
+      "sha256": "efe087bf133fc2c4c9a02ee4a3935e77d4a39ded3b14387c3dde0d90ef25ecc7",
+      "revision": "1aaab606373980a6084ae1a69069280241fb27de"
     }
   },
   "rules": {
@@ -29,5 +35,6 @@
     "naming": "https://github.com/pokerlost/pokerClient/blob/main/docs/flutter-toolchain.md",
     "testing": "https://github.com/pokerlost/pokerClient/blob/main/docs/testing.md",
     "frontendArchitecture": "https://github.com/pokerlost/pokerWeb/blob/main/docs/development.md"
-  }
+  },
+  "latestUpdateRevision": "1aaab606373980a6084ae1a69069280241fb27de"
 }
