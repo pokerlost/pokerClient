@@ -5,8 +5,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:poker_http/src/environment.dart';
 import 'package:poker_http/src/service_id.dart';
 
+export 'package:poker_http/src/environment.dart';
 export 'package:poker_http/src/service_id.dart';
 
 sealed class Authentication {
@@ -18,12 +20,14 @@ final class PublicAuthentication extends Authentication {
 }
 
 final class BearerAuthentication extends Authentication {
-  BearerAuthentication(this.token) {
+  BearerAuthentication(this.token, {this.environment, this.origin}) {
     if (!RegExp(r'^[\x21-\x7e]+$').hasMatch(token)) {
       throw ArgumentError('Invalid authentication configuration');
     }
   }
   final String token;
+  final Environment? environment;
+  final String? origin;
 }
 
 final class GatewayException implements Exception {
@@ -34,14 +38,21 @@ final class GatewayException implements Exception {
   String toString() => 'Gateway request failed ($status)';
 }
 
-Uri _gatewayOrigin(String value) {
+Uri _gatewayOrigin(String value, Environment? environment) {
   Uri origin;
   try {
     origin = Uri.parse(value);
   } on FormatException {
     throw const FormatException('Invalid gateway configuration');
   }
-  if (!['https', 'http'].contains(origin.scheme) ||
+  final loopback = ['localhost', '127.0.0.1', '::1'].contains(origin.host);
+  if ((origin.scheme == 'http' && !loopback) ||
+      (environment != null &&
+          environment != Environment.local &&
+          origin.scheme != 'https') ||
+      (environment == Environment.local && !loopback) ||
+      RegExp(r'[\s\\]').hasMatch(value) ||
+      !['https', 'http'].contains(origin.scheme) ||
       origin.host.isEmpty ||
       origin.userInfo.isNotEmpty ||
       !['', '/'].contains(origin.path) ||
@@ -64,11 +75,26 @@ final class GatewayHttp {
     String origin,
     this.serviceId, {
     http.Client? client,
+    this.environment,
     Duration timeout = const Duration(seconds: 10),
-  }) : origin = _gatewayOrigin(origin),
+  }) : origin = _gatewayOrigin(origin, environment),
        timeout = _validTimeout(timeout),
        _client = client ?? http.Client();
 
+  GatewayHttp.forEnvironment(
+    EnvironmentConfig config,
+    ServiceId serviceId, {
+    http.Client? client,
+    Duration timeout = const Duration(seconds: 10),
+  }) : this(
+         config.resolveOrigin(),
+         serviceId,
+         client: client,
+         timeout: timeout,
+         environment: config.environment,
+       );
+
+  final Environment? environment;
   final Uri origin;
   final ServiceId serviceId;
   final Duration timeout;
@@ -119,6 +145,14 @@ final class GatewayHttp {
           ..headers[serviceIdHeader] = serviceId.wire
           ..body = body;
     if (authentication case BearerAuthentication(:final token)) {
+      if (environment != null &&
+          (authentication.environment != environment ||
+              authentication.origin != origin.origin)) {
+        timer.cancel();
+        throw ArgumentError(
+          'Authentication target does not match client target',
+        );
+      }
       request.headers['Authorization'] = 'Bearer $token';
     }
     try {

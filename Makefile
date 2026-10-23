@@ -1,3 +1,7 @@
+# Quick dev commands never prepare a product/build image.
+ifneq ($(filter lint format format-check check,$(MAKECMDGOALS)),)
+override CONTAINERIZED := 1
+endif
 # Read the source lock without requiring a host Dart/Flutter installation.
 FLUTTER_VERSION := $(shell sed -n 's/.*"flutterVersion": "\([^"]*\)".*/\1/p' toolchain.lock.json)
 FLUTTER_REVISION := $(shell sed -n 's/.*"frameworkRevision": "\([^"]*\)".*/\1/p' toolchain.lock.json)
@@ -25,7 +29,9 @@ VERSION_COMMAND = $(QUALITY_RUN) dart tool/project_metadata.dart version
 RELEASE_CHECK_COMMAND = $(QUALITY_RUN) dart tool/project_metadata.dart release-check
 RECEIPT_COMMAND = $(QUALITY_RUN) dart tool/project_metadata.dart receipt
 OFFLINE_PREFLIGHT_COMMAND = $(MAKE) client-offline-preflight
-CI_LOCAL_TARGETS := check coverage build export-web verify release-check
+CI_LOCAL_TARGETS := acceptance coverage build export-web verify release-check
+QUALITY_EXTRA_TARGETS += acceptance
+CI_LOCAL_TARGETS ?= acceptance coverage build verify release-check
 include docker/quality.mk
 .PHONY: client-offline-preflight
 client-offline-preflight: source-identity
@@ -91,6 +97,15 @@ run:
 	cd apps/poker_game_web && $(FLUTTER) run -d web-server --web-hostname 0.0.0.0
 
 
-check: lint typecheck test
+check: lint format-check ## Fast lint-only gate; no tests/build.
+
+acceptance: lint typecheck test
 
 endif
+
+.PHONY: dev-policy-help
+help: dev-policy-help
+dev-policy-help:
+	@printf '%s\n' 'Daily: make lint; explicit git push origin dev.' \
+	  'Manual only: test, typecheck, coverage, build, acceptance, ci-local.' \
+	  'Native lint tools must be installed; lint never syncs/builds the application.'
